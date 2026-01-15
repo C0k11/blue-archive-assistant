@@ -6,6 +6,7 @@ import time
 import hashlib
 import threading
 import base64
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urlparse
@@ -29,6 +30,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LOGS_DIR = REPO_ROOT / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
+_SERVER_STARTED_AT = time.time()
+
 DASHBOARD_PATH = REPO_ROOT / "dashboard.html"
 ANNOTATE_PATH = REPO_ROOT / "annotate.html"
 
@@ -42,9 +45,8 @@ LOCAL_VLM_OCR_CACHE_VERSION = 1
 _VISION_LOCK = threading.Lock()
 _VISION = None
 
-_LOCAL_VLM_LOCK = threading.Lock()
-_LOCAL_VLM = None
-_LOCAL_VLM_KEY = ""
+_VLM_AGENT_LOCK = threading.Lock()
+_VLM_AGENT = None
 
 
 app = FastAPI()
@@ -60,25 +62,44 @@ def _get_vision():
         return _VISION
 
 
-def _get_local_vlm(*, model: str, models_dir: str, hf_home: str, device: str, max_new_tokens: int):
-    global _LOCAL_VLM, _LOCAL_VLM_KEY
-    key = f"{model}|{models_dir}|{hf_home}|{device}|{max_new_tokens}"
-    with _LOCAL_VLM_LOCK:
-        if _LOCAL_VLM is not None and _LOCAL_VLM_KEY == key:
-            return _LOCAL_VLM
+def _get_vlm_agent():
+    global _VLM_AGENT
+    with _VLM_AGENT_LOCK:
+        return _VLM_AGENT
 
-        from vision.local_vlm_ocr import LocalVlmConfig, LocalVlmOcr
 
-        cfg = LocalVlmConfig(
-            model=model,
-            models_dir=models_dir,
-            hf_home=hf_home,
-            device=device,
-            max_new_tokens=max_new_tokens,
+def _start_vlm_agent(*, payload: Dict[str, Any]) -> None:
+    global _VLM_AGENT
+    with _VLM_AGENT_LOCK:
+        if _VLM_AGENT is not None and getattr(_VLM_AGENT, "is_running")():
+            return
+
+        from agent.vlm_policy import VlmPolicyAgent, VlmPolicyConfig
+
+        cfg = VlmPolicyConfig(
+            window_title=str(payload.get("window_title") or "Blue Archive"),
+            goal=str(payload.get("goal") or "Keep the game running safely."),
+            steps=int(payload.get("steps") or 0),
+            dry_run=bool(payload.get("dry_run") if payload.get("dry_run") is not None else True),
+            step_sleep_s=float(payload.get("step_sleep_s") or 0.6),
+            exploration_click=bool(payload.get("exploration_click") or False),
+            forbid_premium_currency=bool(payload.get("forbid_premium_currency") if payload.get("forbid_premium_currency") is not None else True),
         )
-        _LOCAL_VLM = LocalVlmOcr(cfg)
-        _LOCAL_VLM_KEY = key
-        return _LOCAL_VLM
+
+        _VLM_AGENT = VlmPolicyAgent(cfg)
+        _VLM_AGENT.start()
+
+
+def _stop_vlm_agent() -> None:
+    global _VLM_AGENT
+    with _VLM_AGENT_LOCK:
+        if _VLM_AGENT is None:
+            return
+        try:
+            _VLM_AGENT.stop()
+        except Exception:
+            pass
+        _VLM_AGENT = None
 
 
 def _tcp_listening(host: str, port: int, timeout_s: float = 0.4) -> bool:
@@ -316,10 +337,25 @@ def annotate() -> FileResponse:
 
 @app.get("/api/v1/status")
 def status() -> Dict[str, Any]:
+    agent = _get_vlm_agent()
+    agent_running = bool(agent is not None and getattr(agent, "is_running")())
+    last_action = None
+    last_error = ""
+    try:
+        if agent is not None:
+            last_action = getattr(agent, "last_action")
+            last_error = getattr(agent, "last_error")
+    except Exception:
+        pass
     return {
-        "ollama_listening": _tcp_listening("127.0.0.1", 11434),
-        "agent_running": _agent_proc is not None and _agent_proc.poll() is None,
-        "agent_pid": _agent_proc.pid if _agent_proc is not None and _agent_proc.poll() is None else None,
+        "server_pid": os.getpid(),
+        "server_started_at": round(_SERVER_STARTED_AT, 3),
+        "ollama_listening": False,
+        "agent_running": agent_running,
+        "agent_pid": None,
+        "agent_type": "vlm_policy",
+        "last_action": last_action,
+        "last_error": last_error,
     }
 
 
@@ -348,6 +384,80 @@ def debug_vision() -> Dict[str, Any]:
 
     data["vision_loaded"] = _VISION is not None
     return data
+
+
+@app.post("/api/v1/local_vlm/warmup")
+def local_vlm_warmup(
+    model: str = Query(""),
+    models_dir: str = Query(""),
+    hf_home: str = Query(""),
+    device: str = Query(""),
+    max_new_tokens: int = Query(64),
+) -> Dict[str, Any]:
+    m = (model or os.environ.get("LOCAL_VLM_MODEL") or LOCAL_VLM_MODEL or "").strip()
+    if not m:
+        raise HTTPException(status_code=400, detail="model is required (query model=... or env LOCAL_VLM_MODEL)")
+
+    md = (
+        models_dir
+        or os.environ.get("LOCAL_VLM_MODELS_DIR")
+        or LOCAL_VLM_MODELS_DIR
+        or os.environ.get("MODELS_DIR")
+        or MODELS_DIR
+        or r"D:\\Project\\ml_cache\\models\\vlm"
+    ).strip()
+    hh = (hf_home or os.environ.get("HF_HOME") or HF_CACHE_DIR or r"D:\\Project\\ml_cache\\huggingface").strip()
+    dev = (device or os.environ.get("LOCAL_VLM_DEVICE") or LOCAL_VLM_DEVICE or "cuda").strip()
+
+    mnt = int(max_new_tokens) if max_new_tokens else 64
+    if mnt < 16:
+        mnt = 16
+
+    t0 = time.time()
+    from vision.local_vlm_runtime import get_local_vlm
+
+    engine = get_local_vlm(model=m, models_dir=md, hf_home=hh, device=dev)
+
+    tmp_path = ""
+    try:
+        fd, tmp_path = tempfile.mkstemp(prefix="vlm_warmup_", suffix=".png")
+        os.close(fd)
+        im = Image.new("RGB", (32, 32), (255, 255, 255))
+        im.save(tmp_path)
+
+        prompt = "Return JSON only: {\"items\": []}."
+        res = engine.ocr(image_path=tmp_path, prompt=prompt, max_new_tokens=mnt)
+        raw = str(res.get("raw") or "")
+    finally:
+        try:
+            if tmp_path:
+                os.remove(tmp_path)
+        except Exception:
+            pass
+
+    return {
+        "ok": True,
+        "model": m,
+        "device": dev,
+        "models_dir": md,
+        "hf_home": hh,
+        "max_new_tokens": mnt,
+        "elapsed_s": round(time.time() - t0, 3),
+        "raw_head": raw.strip().replace("\n", " ")[:200],
+    }
+
+
+@app.on_event("startup")
+def _startup_local_vlm_warmup() -> None:
+    if (os.environ.get("LOCAL_VLM_WARMUP") or "").strip() != "1":
+        return
+    try:
+        local_vlm_warmup()
+    except Exception as e:
+        try:
+            print(f"local_vlm warmup failed: {e}")
+        except Exception:
+            pass
 
 
 @app.get("/api/v1/local_vlm/ocr")
@@ -407,8 +517,10 @@ def local_vlm_ocr(
             "Do not include any extra keys. Do not wrap in markdown."
         )
 
-        engine = _get_local_vlm(model=m, models_dir=md, hf_home=hh, device=dev, max_new_tokens=mnt)
-        res = engine.ocr(image_path=str(img), prompt=prompt)
+        from vision.local_vlm_runtime import get_local_vlm
+
+        engine = get_local_vlm(model=m, models_dir=md, hf_home=hh, device=dev)
+        res = engine.ocr(image_path=str(img), prompt=prompt, max_new_tokens=mnt)
         raw = str(res.get("raw") or "")
         if not raw.strip():
             parsed = None
@@ -1213,39 +1325,13 @@ def build_vlm_ocr_index(
 
 @app.post("/api/v1/start")
 def api_start(payload: Dict[str, Any]) -> Dict[str, Any]:
-    llm_host = str(payload.get("llm_host") or "127.0.0.1")
-    llm_port = int(payload.get("llm_port") or 11434)
-    model_tag = str(payload.get("model_tag") or "qwen2.5:14b-instruct")
-    start_local_llm = bool(payload.get("start_local_llm") if payload.get("start_local_llm") is not None else True)
-    auto_pull = bool(payload.get("auto_pull") if payload.get("auto_pull") is not None else False)
-    models_dir = str(payload.get("ollama_models_dir") or r"D:\\Project\\ml_cache\\models")
-
-    steps = int(payload.get("steps") or 0)
-    adb_serial = str(payload.get("adb_serial") or "")
-    od_queries = payload.get("od_queries")
-    if isinstance(od_queries, list):
-        od_q = [str(x) for x in od_queries if str(x).strip()]
-    else:
-        od_q = None
-
-    if start_local_llm:
-        ensure_ollama(host=llm_host, port=llm_port, models_dir=models_dir, auto_pull=auto_pull, model_tag=model_tag)
-
-    start_agent(
-        llm_base_url=f"http://{llm_host}:{llm_port}",
-        llm_model=model_tag,
-        adb_serial=adb_serial,
-        steps=steps,
-        od_queries=od_q,
-        ollama_models_dir=models_dir,
-    )
-
+    _start_vlm_agent(payload=payload)
     return status()
 
 
 @app.post("/api/v1/stop")
 def api_stop() -> Dict[str, Any]:
-    stop_agent()
+    _stop_vlm_agent()
     return status()
 
 

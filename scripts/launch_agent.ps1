@@ -125,16 +125,10 @@ foreach ($q in $Od) {
     if ($q) { $odArgs += @("--od", $q) }
 }
 
-$agentArgs = @("main.py", "--llm-base-url", "http://$ApiHost:$ApiPort", "--llm-model", $ModelName) + $odArgs
-if ($Steps -gt 0) { $agentArgs += @("--steps", "$Steps") }
-
-if ($DryRun) {
-    Write-Host "DRYRUN: py $($agentArgs -join ' ')" -ForegroundColor DarkGray
-    exit 0
-}
-
-$agentProc = Start-Process -FilePath "py" -ArgumentList $agentArgs -WorkingDirectory $repo -PassThru -WindowStyle Normal -RedirectStandardOutput $agentOut -RedirectStandardError $agentErr
-Wait-Process -Id $agentProc.Id
+Write-Host "This launcher no longer starts main.py (legacy ADB agent)." -ForegroundColor Yellow
+Write-Host "Use the desktop EXE or start backend via scripts/run_backend.py, then call POST /api/v1/start from dashboard.html." -ForegroundColor Yellow
+Write-Host "Reason: main.py requires ADB and is not used in the Windows VLM policy workflow." -ForegroundColor DarkGray
+exit 0
 
 try {
     foreach ($proc in $processes) {

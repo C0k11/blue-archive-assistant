@@ -45,7 +45,6 @@ class LocalVlmOcr:
 
     def _set_hf_cache(self) -> None:
         os.environ.setdefault("HF_HOME", self.cfg.hf_home)
-        os.environ.setdefault("TRANSFORMERS_CACHE", self.cfg.hf_home)
         os.environ.setdefault("HUGGINGFACE_HUB_CACHE", self.cfg.hf_home)
 
     def _resolve_model_path(self) -> Tuple[str, Optional[str]]:
@@ -108,7 +107,7 @@ class LocalVlmOcr:
 
             self._model = model.eval()
 
-    def ocr(self, *, image_path: str, prompt: str) -> Dict[str, Any]:
+    def ocr(self, *, image_path: str, prompt: str, max_new_tokens: Optional[int] = None) -> Dict[str, Any]:
         self._ensure_loaded()
         assert self._model is not None
         assert self._processor is not None
@@ -142,7 +141,7 @@ class LocalVlmOcr:
         with torch.inference_mode():
             generated = self._model.generate(
                 **inputs,
-                max_new_tokens=int(self.cfg.max_new_tokens),
+                max_new_tokens=int(max_new_tokens) if max_new_tokens else int(self.cfg.max_new_tokens),
                 do_sample=False,
             )
 

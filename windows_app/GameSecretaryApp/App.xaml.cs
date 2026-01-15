@@ -90,7 +90,7 @@ public partial class App : Application
         Log("App exiting...");
         try
         {
-            LauncherManager.Instance.Stop();
+            BackendManager.Instance.Stop();
         }
         catch
         {

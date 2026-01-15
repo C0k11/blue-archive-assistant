@@ -97,7 +97,6 @@ def build_default_agent(
     od_queries: Optional[Sequence[str]],
 ) -> GameAgent:
     os.environ.setdefault("HF_HOME", hf_cache_dir)
-    os.environ.setdefault("TRANSFORMERS_CACHE", hf_cache_dir)
     os.environ.setdefault("HUGGINGFACE_HUB_CACHE", hf_cache_dir)
 
     vision = FlorenceVision(FlorenceConfig(cache_dir=hf_cache_dir))

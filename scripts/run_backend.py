@@ -14,6 +14,10 @@ if str(REPO_ROOT) not in sys.path:
 
 def main() -> None:
     os.environ.setdefault("PYTHONUTF8", "1")
+    try:
+        os.environ.pop("TRANSFORMERS_CACHE", None)
+    except Exception:
+        pass
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="127.0.0.1")
@@ -29,6 +33,10 @@ def main() -> None:
 
         env = os.environ.copy()
         env.setdefault("PYTHONUTF8", "1")
+        try:
+            env.pop("TRANSFORMERS_CACHE", None)
+        except Exception:
+            pass
 
         creationflags = 0
         if hasattr(subprocess, "CREATE_NEW_PROCESS_GROUP"):

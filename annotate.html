@@ -32,18 +32,11 @@
     <button id="reload_images">Reload Images</button>
     <label>Engine:
       <select id="engine">
-        <option value="vlm">VLM (Ollama)</option>
         <option value="local_vlm">Local VLM (Transformers)</option>
-        <option value="florence">Florence</option>
       </select>
     </label>
     <label>VLM Model:
-      <input id="vlm_model" type="text" placeholder="e.g. qwen2-vl:..." />
-    </label>
-    <button id="refresh_vlm_models">Refresh VLM Models</button>
-    <select id="vlm_models" style="min-width: 220px;"></select>
-    <label>VLM Base URL:
-      <input id="vlm_base_url" type="text" placeholder="http://127.0.0.1:11434" />
+      <input id="vlm_model" type="text" value="Qwen/Qwen3-VL-8B-Instruct" readonly />
     </label>
     <label>Label to save:
       <input id="label" type="text" placeholder="e.g. goto:mail / page:home" />
@@ -213,24 +206,9 @@
 
     async function runOcr() {
       if (!currentImage) { setStatus('Select an image first'); return; }
-      const engine = $('engine').value;
-      let url = '';
-      if (engine === 'vlm') {
-        const m = ($('vlm_model').value || '').trim();
-        const bu = ($('vlm_base_url').value || '').trim();
-        if (!m) { setStatus('Please fill VLM Model first'); return; }
-        url = '/api/v1/vlm/ocr?path=' + encodeURIComponent(currentImage) + '&model=' + encodeURIComponent(m);
-        if (bu) url += '&base_url=' + encodeURIComponent(bu);
-        setStatus('Loading VLM OCR... (cache-first, first time is slow)');
-      } else if (engine === 'local_vlm') {
-        const m = ($('vlm_model').value || '').trim();
-        if (!m) { setStatus('Please fill VLM Model first'); return; }
-        url = '/api/v1/local_vlm/ocr?path=' + encodeURIComponent(currentImage) + '&model=' + encodeURIComponent(m);
-        setStatus('Loading Local VLM OCR... (cache-first, first time downloads & loads model)');
-      } else {
-        url = '/api/v1/vision/ocr?path=' + encodeURIComponent(currentImage);
-        setStatus('Loading Florence OCR... (cache-first, first time loads model)');
-      }
+      const m = ($('vlm_model').value || '').trim();
+      const url = '/api/v1/local_vlm/ocr?path=' + encodeURIComponent(currentImage) + '&model=' + encodeURIComponent(m);
+      setStatus('Loading Local VLM OCR... (cache-first, first time downloads & loads model)');
       const data = await api(url);
       currentOcr = data.items || [];
 
@@ -278,28 +256,11 @@
     async function buildOcrIndex() {
       const session = $('session').value;
       if (!session) { setStatus('Select a session first'); return; }
-      const engine = $('engine').value;
-      if (engine === 'vlm') {
-        const m = ($('vlm_model').value || '').trim();
-        const bu = ($('vlm_base_url').value || '').trim();
-        if (!m) { setStatus('Please fill VLM Model first'); return; }
-        setStatus('Building vlm_ocr_index.jsonl from cache...');
-        let url = '/api/v1/vlm/ocr_index/build?session=' + encodeURIComponent(session) + '&compute_missing=0&model=' + encodeURIComponent(m);
-        if (bu) url += '&base_url=' + encodeURIComponent(bu);
-        const res = await api(url, { method: 'POST' });
-        setStatus(`Built: ${res.out} (written=${res.written}, missing=${res.missing}, errors=${res.errors})`);
-      } else if (engine === 'local_vlm') {
-        const m = ($('vlm_model').value || '').trim();
-        if (!m) { setStatus('Please fill VLM Model first'); return; }
-        setStatus('Building local_vlm_ocr_index.jsonl from cache...');
-        const url = '/api/v1/local_vlm/ocr_index/build?session=' + encodeURIComponent(session) + '&compute_missing=0&model=' + encodeURIComponent(m);
-        const res = await api(url, { method: 'POST' });
-        setStatus(`Built: ${res.out} (written=${res.written}, missing=${res.missing}, errors=${res.errors})`);
-      } else {
-        setStatus('Building ocr_index.jsonl from cache...');
-        const res = await api('/api/v1/vision/ocr_index/build?session=' + encodeURIComponent(session) + '&compute_missing=0', { method: 'POST' });
-        setStatus(`Built: ${res.out} (written=${res.written}, missing=${res.missing}, errors=${res.errors})`);
-      }
+      const m = ($('vlm_model').value || '').trim();
+      setStatus('Building local_vlm_ocr_index.jsonl from cache...');
+      const url = '/api/v1/local_vlm/ocr_index/build?session=' + encodeURIComponent(session) + '&compute_missing=0&model=' + encodeURIComponent(m);
+      const res = await api(url, { method: 'POST' });
+      setStatus(`Built: ${res.out} (written=${res.written}, missing=${res.missing}, errors=${res.errors})`);
     }
 
     $('reload_sessions').onclick = async () => {
@@ -315,47 +276,10 @@
       try { await buildOcrIndex(); } catch (e) { setStatus(e.message); }
     };
 
-    async function refreshVlmModels() {
-      const bu = ($('vlm_base_url').value || '').trim() || 'http://127.0.0.1:11434';
-      setStatus('Querying Ollama tags...');
-      const data = await api('/api/v1/vlm/tags?base_url=' + encodeURIComponent(bu));
-      const models = (data.models || []).map(m => m.name).filter(Boolean);
-      const sel = $('vlm_models');
-      sel.innerHTML = '';
-      for (const name of models) {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        sel.appendChild(opt);
-      }
-      const current = ($('vlm_model').value || '').trim();
-      if (current && models.includes(current)) {
-        sel.value = current;
-      } else if (models.length) {
-        sel.value = models[0];
-      }
-      setStatus('Ollama models: ' + models.length);
-    }
-
-    $('refresh_vlm_models').onclick = async () => {
-      try { await refreshVlmModels(); } catch (e) { setStatus(e.message); }
-    };
-
-    $('vlm_models').onchange = () => {
-      const v = $('vlm_models').value;
-      if (v) {
-        $('vlm_model').value = v;
-        localStorage.setItem('vlm_model', v);
-      }
-    };
-
     (async () => {
       try {
-        $('vlm_base_url').value = localStorage.getItem('vlm_base_url') || 'http://127.0.0.1:11434';
-        $('vlm_model').value = localStorage.getItem('vlm_model') || '';
-        $('engine').value = localStorage.getItem('engine') || 'vlm';
-
-        await refreshVlmModels().catch(() => {});
+        $('engine').value = 'local_vlm';
+        $('vlm_model').value = 'Qwen/Qwen3-VL-8B-Instruct';
 
         await loadSessions();
         await loadImages();
@@ -364,16 +288,6 @@
         setStatus(e.message);
       }
     })();
-
-    $('engine').onchange = () => {
-      localStorage.setItem('engine', $('engine').value);
-    };
-    $('vlm_model').onchange = () => {
-      localStorage.setItem('vlm_model', $('vlm_model').value);
-    };
-    $('vlm_base_url').onchange = () => {
-      localStorage.setItem('vlm_base_url', $('vlm_base_url').value);
-    };
   </script>
 </body>
 </html>

@@ -15,6 +15,10 @@ logs/
 # Runtime / datasets / caches
 /data/captures/
 /data/captures/_cache/
+/data/trajectories/
+
+# Packaged app output (use GitHub Releases instead)
+/dist/
 
 # Local upstream copies (not part of main repo)
 ai-game-secretary-upstream/

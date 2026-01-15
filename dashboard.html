@@ -5,88 +5,131 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI Game Secretary</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-    label { display: flex; flex-direction: column; font-size: 12px; color: #333; }
-    input[type=text], input[type=number] { padding: 8px; min-width: 180px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; background: #fafafa; color: #111; }
+    .container { max-width: 1240px; margin: 0 auto; }
+    .topbar { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+    .topbar h2 { margin: 0; font-size: 22px; }
+    .topbar .links { display: flex; gap: 12px; font-size: 13px; }
+
+    .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-end; }
+    label { display: flex; flex-direction: column; font-size: 12px; color: #333; gap: 6px; }
+    input[type=text], input[type=number] { padding: 9px 10px; min-width: 180px; border: 1px solid #ddd; border-radius: 8px; }
     .wide { min-width: 520px; flex: 1; }
-    button { padding: 10px 14px; }
-    .logs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-    textarea { width: 100%; height: 520px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
-    .status { padding: 8px 10px; background: #f5f5f5; border: 1px solid #ddd; margin-top: 10px; }
+
+    .btn { padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .btn:hover { background: #f7f7f7; }
+    .btn.primary { background: #0b5fff; border-color: #0b5fff; color: #fff; }
+    .btn.primary:hover { background: #0a55e5; }
+    .btn.danger { background: #fff; border-color: #f0b4b4; color: #b00020; }
+    .btn.danger:hover { background: #fff5f5; }
+    .btn.ghost { background: transparent; }
+
+    .status { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; border: 1px solid #ddd; background: #f6f6f6; font-size: 12px; }
+    .pill.ok { border-color: #b7e4c7; background: #ecfdf3; color: #0a7a2f; }
+    .pill.bad { border-color: #f0b4b4; background: #fff5f5; color: #b00020; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    .logs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+    textarea.log { width: 100%; height: 520px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; border: 1px solid #ddd; border-radius: 10px; padding: 10px; }
+    textarea#goal { width: 100%; min-height: 140px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; border: 1px solid #ddd; border-radius: 10px; }
+    details > summary { cursor: pointer; user-select: none; }
+    .muted { color: #666; }
   </style>
 </head>
 <body>
-  <h2>AI Game Secretary</h2>
-
-  <div class="row">
-    <a href="/annotate.html">Annotate (click text to save labels)</a>
-  </div>
-
-  <div class="row">
-    <label>LLM Host
-      <input id="llm_host" type="text" value="127.0.0.1" />
-    </label>
-    <label>LLM Port
-      <input id="llm_port" type="number" value="11434" />
-    </label>
-    <label class="wide">Model Tag (Ollama)
-      <input id="model_tag" type="text" value="qwen2.5:14b-instruct" />
-    </label>
-  </div>
-
-  <div class="row">
-    <label class="wide">OLLAMA_MODELS
-      <input id="ollama_models_dir" type="text" value="D:\\Project\\ml_cache\\models" />
-    </label>
-  </div>
-
-  <div class="row">
-    <label>ADB Serial
-      <input id="adb_serial" type="text" placeholder="(optional)" />
-    </label>
-    <label>Steps (0=loop)
-      <input id="steps" type="number" value="0" />
-    </label>
-    <label class="wide">OD Queries (comma)
-      <input id="od_queries" type="text" value="Start,Skip,Next,Battle,Event" />
-    </label>
-  </div>
-
-  <div class="row">
-    <label>
-      <span> </span>
-      <label style="flex-direction:row; gap:8px; align-items:center; font-size:13px;">
-        <input id="start_local_llm" type="checkbox" checked /> Start Local LLM (Ollama)
-      </label>
-    </label>
-    <label>
-      <span> </span>
-      <label style="flex-direction:row; gap:8px; align-items:center; font-size:13px;">
-        <input id="auto_pull" type="checkbox" /> Auto Pull Model
-      </label>
-    </label>
-
-    <button id="btn_start">Start</button>
-    <button id="btn_stop">Stop</button>
-    <button id="btn_refresh">Refresh</button>
-  </div>
-
-  <div class="status" id="status">Status: ...</div>
-
-  <div class="logs">
-    <div>
-      <div><b>agent.out.log</b></div>
-      <textarea id="agent_out" readonly></textarea>
+  <div class="container">
+    <div class="topbar">
+      <h2>AI Game Secretary</h2>
+      <div class="links">
+        <a href="/annotate.html">Annotate</a>
+        <a href="/docs" class="muted" target="_blank" rel="noreferrer">API Docs</a>
+      </div>
     </div>
-    <div>
-      <div><b>agent.err.log</b></div>
-      <textarea id="agent_err" readonly></textarea>
+
+    <div class="card">
+      <div class="row">
+        <label>Window Title
+          <input id="window_title" type="text" value="Blue Archive" />
+        </label>
+        <label>Steps (0=loop)
+          <input id="steps" type="number" value="0" />
+        </label>
+        <label>Step Sleep (s)
+          <input id="step_sleep_s" type="number" value="0.6" />
+        </label>
+      </div>
+
+      <div class="row">
+        <label class="wide">Goal
+          <textarea id="goal">Keep the game running safely.</textarea>
+        </label>
+      </div>
+
+      <div class="row">
+        <label style="flex-direction:row; gap:8px; align-items:center; font-size:13px;">
+          <input id="dry_run" type="checkbox" checked /> Dry Run
+        </label>
+        <label style="flex-direction:row; gap:8px; align-items:center; font-size:13px;">
+          <input id="forbid_premium_currency" type="checkbox" checked /> Forbid Premium Currency
+        </label>
+        <label style="flex-direction:row; gap:8px; align-items:center; font-size:13px;">
+          <input id="exploration_click" type="checkbox" /> Exploration Click
+        </label>
+
+        <button id="btn_start" class="btn primary">Start</button>
+        <button id="btn_stop" class="btn danger">Stop</button>
+        <button id="btn_refresh" class="btn">Refresh</button>
+        <button id="btn_clear" class="btn ghost">Clear View</button>
+      </div>
+
+      <div class="status" id="status">
+        <span class="pill" id="status_pill">Unknown</span>
+        <span class="mono" id="status_text">Status: ...</span>
+      </div>
     </div>
+
+    <details open style="margin-top: 12px;">
+      <summary class="muted">Logs</summary>
+      <div class="logs">
+        <div>
+          <div><b>agent.out.log</b></div>
+          <textarea id="agent_out" class="log" readonly></textarea>
+        </div>
+        <div>
+          <div><b>agent.err.log</b></div>
+          <textarea id="agent_err" class="log" readonly></textarea>
+        </div>
+      </div>
+    </details>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
+
+    const STORAGE_KEY = 'ai_game_secretary.dashboard.v1';
+
+    function loadSaved() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        if (typeof s.window_title === 'string') $('window_title').value = s.window_title;
+        if (typeof s.goal === 'string') $('goal').value = s.goal;
+        if (typeof s.steps === 'number') $('steps').value = String(s.steps);
+        if (typeof s.step_sleep_s === 'number') $('step_sleep_s').value = String(s.step_sleep_s);
+        if (typeof s.dry_run === 'boolean') $('dry_run').checked = s.dry_run;
+        if (typeof s.forbid_premium_currency === 'boolean') $('forbid_premium_currency').checked = s.forbid_premium_currency;
+        if (typeof s.exploration_click === 'boolean') $('exploration_click').checked = s.exploration_click;
+      } catch (e) {}
+    }
+
+    function saveNow() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload()));
+      } catch (e) {}
+    }
 
     async function api(path, opts) {
       const r = await fetch(path, opts);
@@ -100,17 +143,14 @@
     }
 
     function payload() {
-      const od = $('od_queries').value.split(',').map(x => x.trim()).filter(Boolean);
       return {
-        llm_host: $('llm_host').value.trim(),
-        llm_port: parseInt($('llm_port').value, 10) || 11434,
-        model_tag: $('model_tag').value.trim(),
-        start_local_llm: $('start_local_llm').checked,
-        auto_pull: $('auto_pull').checked,
-        ollama_models_dir: $('ollama_models_dir').value.trim(),
-        adb_serial: $('adb_serial').value.trim(),
+        window_title: $('window_title').value.trim(),
+        goal: $('goal').value.trim(),
         steps: parseInt($('steps').value, 10) || 0,
-        od_queries: od,
+        step_sleep_s: parseFloat($('step_sleep_s').value) || 0.6,
+        dry_run: $('dry_run').checked,
+        forbid_premium_currency: $('forbid_premium_currency').checked,
+        exploration_click: $('exploration_click').checked,
       };
     }
 
@@ -121,18 +161,30 @@
         const err = await api('/api/v1/logs?name=agent.err.log&lines=400');
         $('agent_out').value = out;
         $('agent_err').value = err;
-        $('status').textContent = `Status: ollama_listening=${st.ollama_listening} agent_running=${st.agent_running} pid=${st.agent_pid || ''}`;
+        const la = st.last_action ? JSON.stringify(st.last_action).slice(0, 300) : '';
+        const le = st.last_error ? String(st.last_error).slice(0, 300) : '';
+        const ok = Boolean(st.agent_running) && !le;
+        $('status_pill').className = 'pill ' + (ok ? 'ok' : 'bad');
+        $('status_pill').textContent = ok ? 'Running' : (st.agent_running ? 'Error' : 'Stopped');
+        $('status_text').textContent = `agent_running=${st.agent_running} type=${st.agent_type || ''} last_error=${le} last_action=${la}`;
       } catch (e) {
-        $('status').textContent = 'Status: ' + e.message;
+        $('status_pill').className = 'pill bad';
+        $('status_pill').textContent = 'Offline';
+        $('status_text').textContent = 'Status: ' + e.message;
       }
     }
 
     $('btn_start').onclick = async () => {
-      $('status').textContent = 'Status: starting...';
+      $('status_pill').className = 'pill';
+      $('status_pill').textContent = 'Starting';
+      $('status_text').textContent = 'Status: starting...';
       try {
+        saveNow();
         await api('/api/v1/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload())});
       } catch (e) {
-        $('status').textContent = 'Status: start failed: ' + e.message;
+        $('status_pill').className = 'pill bad';
+        $('status_pill').textContent = 'Start failed';
+        $('status_text').textContent = 'Status: start failed: ' + e.message;
       }
       await refresh();
     };
@@ -141,13 +193,30 @@
       try {
         await api('/api/v1/stop', { method: 'POST' });
       } catch (e) {
-        $('status').textContent = 'Status: stop failed: ' + e.message;
+        $('status_pill').className = 'pill bad';
+        $('status_pill').textContent = 'Stop failed';
+        $('status_text').textContent = 'Status: stop failed: ' + e.message;
       }
       await refresh();
     };
 
     $('btn_refresh').onclick = refresh;
 
+    $('btn_clear').onclick = () => {
+      $('agent_out').value = '';
+      $('agent_err').value = '';
+    };
+
+    ['window_title', 'steps', 'step_sleep_s', 'goal', 'dry_run', 'forbid_premium_currency', 'exploration_click'].forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener('change', saveNow);
+      el.addEventListener('input', () => {
+        if (id === 'goal') saveNow();
+      });
+    });
+
+    loadSaved();
     setInterval(refresh, 1200);
     refresh();
   </script>

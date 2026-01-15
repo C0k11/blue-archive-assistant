@@ -28,7 +28,6 @@ except Exception:
 
 def _set_hf_cache_dir(cache_dir: str) -> None:
     os.environ.setdefault("HF_HOME", cache_dir)
-    os.environ.setdefault("TRANSFORMERS_CACHE", cache_dir)
     os.environ.setdefault("HUGGINGFACE_HUB_CACHE", cache_dir)
 
 

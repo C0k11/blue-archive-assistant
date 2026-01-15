@@ -32,6 +32,11 @@ public sealed class LauncherManager
 
     public void Start(LaunchConfig cfg)
     {
+        throw new InvalidOperationException(
+            "LauncherManager is deprecated. Use BackendManager (FastAPI backend) and start the VLM policy agent via dashboard.html (POST /api/v1/start). " +
+            "The legacy main.py launcher requires ADB and is not used in the Windows workflow."
+        );
+
         if (_proc is { HasExited: false })
         {
             if (!cfg.ForceRestart)

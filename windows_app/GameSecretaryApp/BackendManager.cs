@@ -3,8 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Text;
+using System.Text.RegularExpressions;
 using System.Text.Json;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace GameSecretaryApp;
@@ -21,6 +22,8 @@ public sealed class BackendManager
 
     public string ApiBase => $"http://{ApiHost}:{ApiPort}/api/v1";
     public string DashboardUrl => $"http://{ApiHost}:{ApiPort}/dashboard.html?v={Uri.EscapeDataString(DateTime.UtcNow.Ticks.ToString())}";
+
+    public string LocalVlmModel { get; } = "Qwen/Qwen3-VL-8B-Instruct";
 
     private BackendManager() { }
 
@@ -39,7 +42,10 @@ public sealed class BackendManager
 
         if (TcpListening(ApiHost, ApiPort, timeoutMs: 400))
         {
-            return;
+            // A backend (possibly older code/env) is already holding the port.
+            // Restart to ensure we use the intended venv/env vars and endpoints.
+            TryKillTcpListener(ApiPort);
+            await Task.Delay(400);
         }
 
         Directory.CreateDirectory(Path.Combine(_repoRoot, "logs"));
@@ -47,9 +53,16 @@ public sealed class BackendManager
         var errLog = Path.Combine(_repoRoot, "logs", "backend.err.log");
         var statePath = Path.Combine(_repoRoot, "logs", "backend.state.json");
 
+        // Clear stale agent logs so dashboard doesn't show legacy main.py/ADB traceback
+        try { File.WriteAllText(Path.Combine(_repoRoot, "logs", "agent.out.log"), "", Encoding.UTF8); } catch { }
+        try { File.WriteAllText(Path.Combine(_repoRoot, "logs", "agent.err.log"), "", Encoding.UTF8); } catch { }
+
         var venvPy = Path.Combine(_repoRoot, "venv311", "Scripts", "python.exe");
+        var stockPy = @"D:\Project\Stock\venv311\Scripts\python.exe";
         var envPy = Environment.GetEnvironmentVariable("GAMESECRETARY_PYTHON") ?? "";
-        var py = !string.IsNullOrWhiteSpace(envPy) && File.Exists(envPy) ? envPy : (File.Exists(venvPy) ? venvPy : "py");
+        var py = !string.IsNullOrWhiteSpace(envPy) && File.Exists(envPy)
+            ? envPy
+            : (File.Exists(venvPy) ? venvPy : (File.Exists(stockPy) ? stockPy : "py"));
         var script = Path.Combine(_repoRoot, "scripts", "run_backend.py");
 
         var psi = new ProcessStartInfo
@@ -66,6 +79,15 @@ public sealed class BackendManager
         try
         {
             psi.Environment["PYTHONUTF8"] = "1";
+
+            // Avoid deprecated Transformers cache env var if user set it globally
+            try { psi.Environment.Remove("TRANSFORMERS_CACHE"); } catch { }
+
+            // Force local_vlm only (Qwen3-VL-8B)
+            psi.Environment["LOCAL_VLM_MODEL"] = LocalVlmModel;
+            psi.Environment["LOCAL_VLM_DEVICE"] = "cuda";
+            psi.Environment["LOCAL_VLM_MODELS_DIR"] = Path.Combine(@"D:\Project\ml_cache\models", "vlm");
+            psi.Environment["HF_HOME"] = @"D:\Project\ml_cache\huggingface";
         }
         catch
         {
@@ -108,6 +130,68 @@ public sealed class BackendManager
         if (!ok)
         {
             throw new TimeoutException($"Backend did not become ready: {ApiBase}/status");
+        }
+    }
+
+    private static void TryKillTcpListener(int port)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "netstat",
+                Arguments = "-ano -p tcp",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+
+            using var p = Process.Start(psi);
+            if (p == null) return;
+            var txt = p.StandardOutput.ReadToEnd();
+            try { p.WaitForExit(1500); } catch { }
+
+            var re = new Regex(@"\\s+TCP\\s+[^\\s]+:" + port + @"\\s+[^\\s]+\\s+LISTENING\\s+(\\d+)", RegexOptions.IgnoreCase);
+            var m = re.Match(txt ?? "");
+            if (!m.Success) return;
+            if (!int.TryParse(m.Groups[1].Value, out var pid)) return;
+            if (pid <= 0) return;
+
+            try
+            {
+                var proc = Process.GetProcessById(pid);
+                proc.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    public async Task<bool> WarmupLocalVlmAsync(int timeoutSec)
+    {
+        var url = $"{ApiBase}/local_vlm/warmup?max_new_tokens=16";
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(timeoutSec) };
+        try
+        {
+            var resp = await http.PostAsync(url, content: null);
+            if (!resp.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            // Read JSON to surface parse errors early (optional)
+            var txt = await resp.Content.ReadAsStringAsync();
+            try { JsonDocument.Parse(txt); } catch { }
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
