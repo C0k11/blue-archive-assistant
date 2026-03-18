@@ -1,0 +1,1494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>私人碧蓝档案助手</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f172a;--bg2:#1e293b;--bg3:#334155;--border:#475569;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--accent2:#2563eb;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--font:system-ui,-apple-system,'Segoe UI',sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex}
+
+/* ── Sidebar ── */
+.sidebar{width:56px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px;flex-shrink:0;transition:width .2s}
+.sidebar .logo{font-size:20px;margin-bottom:8px;padding:8px 0}
+.nav-btn{width:44px;height:44px;border:none;background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .15s}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--accent);color:#fff}
+.nav-btn .label{display:none}
+.sidebar-bottom{margin-top:auto}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.page{display:none;flex:1;overflow:auto;padding:20px}
+.page.active{display:flex;flex-direction:column}
+.page-title{font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+
+/* ── Cards ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.card h3{font-size:14px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+
+/* ── Form elements ── */
+.form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:flex-end}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.form-group input,.form-group textarea,.form-group select{padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group textarea{min-height:100px;font-family:var(--mono);font-size:12px;resize:vertical}
+.form-group.wide{flex:1;min-width:300px}
+.check-row{display:flex;gap:16px;align-items:center;font-size:13px}
+.check-row label{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text)}
+
+/* ── Buttons ── */
+.btn{padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--border)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-danger{background:#991b1b;border-color:var(--red);color:#fff}
+.btn-danger:hover{background:var(--red)}
+.btn-success{background:#15803d;border-color:var(--green);color:#fff}
+.btn-success:hover{background:#16a34a}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* ── Status pill ── */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.pill.ok{background:#052e16;color:var(--green);border:1px solid #15803d}
+.pill.bad{background:#450a0a;color:var(--red);border:1px solid #991b1b}
+.pill.idle{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+
+/* ── Logs ── */
+.logs-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;min-height:0}
+.log-box{display:flex;flex-direction:column;min-height:0}
+.log-box textarea{flex:1;width:100%;font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);resize:none}
+
+/* ── Routine HUD ── */
+.routine-hud{padding:10px;border-radius:8px;background:#0c4a6e;border:1px solid #0369a1;margin-top:8px}
+.routine-hud.recovery{background:#450a0a;border-color:#991b1b}
+.progress-bar{width:100%;background:var(--bg3);height:6px;border-radius:3px;margin:6px 0}
+.progress-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .3s}
+
+/* ── Capture page ── */
+.capture-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.stat-card .num{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-card .lbl{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase}
+
+/* ── Annotate page ── */
+.annotate-layout{display:flex;flex:1;gap:0;min-height:0;overflow:hidden}
+.ann-sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:10px;flex-shrink:0;display:flex;flex-direction:column;gap:4px}
+.ann-sidebar h4{font-size:11px;color:var(--muted);text-transform:uppercase;margin:8px 0 4px;letter-spacing:.3px}
+.ann-canvas-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;background:#0a0a0a}
+.ann-canvas-area canvas{cursor:crosshair;max-width:100%;max-height:100%;object-fit:contain;touch-action:none}
+.class-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid transparent}
+.class-item:hover{background:var(--bg3)}
+.class-item.sel{border-color:var(--accent);background:#1e3a5f}
+.class-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.box-item{display:flex;align-items:center;gap:4px;padding:3px 6px;border-radius:3px;cursor:pointer;font-size:11px}
+.box-item:hover{background:var(--bg3)}
+.box-item.sel{background:#1e3a5f;border:1px solid var(--accent)}
+.add-class-row{display:flex;gap:4px;margin:4px 0}
+.add-class-row input{flex:1;padding:4px 6px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:11px;outline:none}
+.add-class-row input:focus{border-color:var(--accent)}
+.ann-minimap{margin-top:8px;border:1px solid var(--border);border-radius:4px;background:#000;cursor:crosshair;display:block;width:100%}
+.ann-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ann-toolbar .info{font-size:12px;color:var(--muted)}
+.ann-help{font-size:10px;color:#64748b;line-height:1.5;padding:8px;margin-top:auto}
+.ann-help kbd{background:var(--bg3);padding:1px 4px;border-radius:2px;font-size:9px}
+.assistant-sub{font-size:12px;color:var(--muted);margin:-10px 0 14px 0}
+.profile-actions{display:flex;gap:6px;align-items:center}
+.skill-list{display:flex;flex-direction:column;gap:8px}
+.skill-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+.skill-row.off{opacity:.55}
+.skill-row .skill-main{display:flex;align-items:center;gap:8px;flex:1}
+.skill-row .skill-handle{font-family:var(--mono);color:var(--muted);font-size:12px;min-width:18px;text-align:center}
+.skill-row .skill-label{font-size:13px}
+.skill-row .skill-id{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.skill-row .skill-actions{display:flex;gap:4px}
+.profile-hint{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* ── Char grid ── */
+.char-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px;max-height:350px;overflow-y:auto;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px}
+.char-item{display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:3px;border-radius:4px;border:2px solid transparent;transition:all .15s;user-select:none}
+.char-item:hover{background:var(--bg3)}
+.char-item.selected{border-color:var(--accent);background:#1e3a5f}
+.char-avatar{width:44px;height:44px;object-fit:cover;border-radius:3px;pointer-events:none}
+.char-name{font-size:9px;margin-top:2px;text-align:center;color:var(--muted);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<div class="sidebar">
+  <div class="logo" style="font-weight:700;font-size:14px;letter-spacing:-1px">BA</div>
+  <button class="nav-btn active" onclick="showPage('agent')" title="助手控制台">A</button>
+  <button class="nav-btn" onclick="showPage('capture')" title="采集中心">C</button>
+  <button class="nav-btn" onclick="showPage('annotate')" title="标注中心">L</button>
+  <div class="sidebar-bottom">
+    <button class="nav-btn" onclick="window.open('/docs','_blank')" title="API 文档">?</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ════════════ AGENT PAGE ════════════ -->
+<div class="page active" id="page-agent">
+  <div class="page-title">私人碧蓝档案助手</div>
+  <div class="assistant-sub">纯本地日常收菜工作台：多档案、多账号标记、日常流程编排、收藏角色、OCR + 模板匹配 + YOLO 状态机驱动。</div>
+  <div class="card">
+    <div class="form-row">
+      <div class="form-group" style="min-width:260px">
+        <label>配置档案</label>
+        <div class="profile-actions">
+          <select id="profile_select" style="min-width:180px"></select>
+          <button class="btn btn-sm" id="btn_profile_new">新建</button>
+          <button class="btn btn-sm btn-danger" id="btn_profile_delete">删除</button>
+        </div>
+      </div>
+      <div class="form-group" style="min-width:220px">
+        <label>账号标记</label>
+        <input id="account_label" type="text" placeholder="例：主号 / 国际服小号"/>
+      </div>
+      <div class="form-group wide">
+        <label>完成通知 Webhook</label>
+        <input id="notify_webhook_url" type="text" placeholder="Discord / Telegram / 自定义 webhook URL"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="min-width:400px;flex:1">
+        <label>Game EXE Path</label>
+        <input id="game_exe_path" type="text" value=""/>
+      </div>
+      <div class="form-group">
+        <label>Window Title</label>
+        <input id="window_title" type="text" value="MuMu"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group wide">
+        <label>日常目标指令</label>
+        <textarea id="goal">保持碧蓝档案日常流程稳定、安全、可回退，优先完成收菜与领奖，不触碰抽卡/氪金相关按钮。</textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Steps (0=loop)</label><input id="steps" type="number" value="0" style="width:90px"/></div>
+      <div class="form-group"><label>Step Sleep</label><input id="step_sleep_s" type="number" value="0.6" style="width:80px"/></div>
+      <div class="form-group"><label>AP Purchase Limit</label><input id="ap_purchase_limit" type="number" value="0" style="width:90px"/></div>
+    </div>
+    <div class="form-row" style="gap:16px">
+      <div class="check-row">
+        <label><input id="dry_run" type="checkbox" checked/> Dry Run</label>
+        <label><input id="forbid_premium_currency" type="checkbox" checked/> 禁止高级货币 / 抽卡点击</label>
+        <label><input id="exploration_click" type="checkbox"/> 探索性点击</label>
+        <label><input id="notify_on_finish" type="checkbox"/> 完成后通知</label>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:6px">
+      <button class="btn-primary btn" id="btn_start">Start</button>
+      <button class="btn-danger btn" id="btn_stop">Stop</button>
+      <button class="btn" id="btn_goal_daily">填入日常模板</button>
+      <button class="btn" id="btn_profile_save">保存档案</button>
+      <div style="flex:1"></div>
+      <span id="profile_status" style="font-size:11px;color:var(--muted);margin-right:8px"></span>
+      <span class="pill idle" id="status_pill">Unknown</span>
+    </div>
+    <div class="profile-hint">档案会保存窗口标题、账号标记、通知地址、技能顺序和收藏角色，适合主号/小号/不同模拟器配置一键切换。</div>
+    <div id="status_text" style="font-size:11px;color:var(--muted);margin-top:6px;font-family:var(--mono);word-break:break-all;max-height:40px;overflow:hidden">Status: ...</div>
+    <div id="routineHud" class="routine-hud" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span id="routinePhase" style="font-weight:700">Idle</span>
+        <span id="routineBadge" class="pill ok" style="font-size:11px">Normal</span>
+      </div>
+      <div class="progress-bar"><div id="routineProgressBar" class="progress-fill"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+        <span id="routineStepInfo">Step 0/0</span>
+        <span id="routineTurnInfo">Turns: 0/15</span>
+      </div>
+      <div id="routineRetryInfo" style="font-size:11px;color:var(--yellow);display:none;margin-top:2px"></div>
+    </div>
+  </div>
+
+  <details open style="margin-bottom:12px">
+    <summary style="cursor:pointer;color:var(--muted);font-size:13px;user-select:none">日常流程编排</summary>
+    <div class="card" style="margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--muted)">按顺序执行你启用的收菜模块；支持拖曳替代方案前的上下微调。</div>
+        <button class="btn btn-sm" id="btn_skills_reset">恢复默认顺序</button>
+      </div>
+      <div id="skill_list" class="skill-list"></div>
+      <div id="skill_plan_status" class="profile-hint"></div>
+    </div>
+  </details>
+
+  <details style="margin-bottom:12px">
+    <summary style="cursor:pointer;color:var(--muted);font-size:13px;user-select:none">课程表 / 咖啡厅收藏角色</summary>
+    <div class="card" style="margin-top:8px">
+      <div id="char_grid" class="char-grid"></div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary btn-sm" id="btn_save_favorites">保存收藏角色</button>
+        <span id="favorites_status" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+    </div>
+  </details>
+
+  <div class="logs-grid" style="flex:1;min-height:200px">
+    <div class="log-box"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">agent.out.log</div><textarea id="agent_out" readonly></textarea></div>
+    <div class="log-box"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">agent.err.log</div><textarea id="agent_err" readonly></textarea></div>
+  </div>
+</div>
+
+<!-- ════════════ CAPTURE PAGE ════════════ -->
+<div class="page" id="page-capture">
+  <div class="page-title">Screen Capture</div>
+  <div class="capture-stats">
+    <div class="stat-card"><div class="num" id="cap_frames">0</div><div class="lbl">Frames</div></div>
+    <div class="stat-card"><div class="num" id="cap_status_text" style="font-size:16px;color:var(--muted)">Idle</div><div class="lbl">Status</div></div>
+    <div class="stat-card"><div class="num" id="cap_dataset" style="font-size:14px;color:var(--muted)">-</div><div class="lbl">Dataset</div></div>
+  </div>
+  <div class="card">
+    <h3>Capture Settings</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Window Title</label><input id="cap_window" type="text" value="MuMu"/></div>
+      <div class="form-group"><label>Interval (sec)</label><input id="cap_interval" type="number" value="0.5" step="0.1" style="width:80px"/></div>
+      <button class="btn btn-success" id="btn_cap_start" style="align-self:flex-end">Start Capture</button>
+      <button class="btn btn-danger" id="btn_cap_stop" style="align-self:flex-end">Stop</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px" id="cap_error"></div>
+  </div>
+  <div class="card">
+    <h3>Existing Datasets</h3>
+    <div id="dataset_list" style="font-size:13px;color:var(--muted)">Loading...</div>
+  </div>
+</div>
+
+<!-- ════════════ ANNOTATE PAGE ════════════ -->
+<div class="page" id="page-annotate" style="padding:0;overflow:hidden">
+  <div class="ann-toolbar">
+    <div class="form-group" style="margin:0">
+      <select id="ann_dataset" style="padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px"><option value="">Select dataset...</option></select>
+    </div>
+    <button class="btn btn-sm" onclick="annPrev()">◀ Prev</button>
+    <span class="info" id="ann_counter">-</span>
+    <button class="btn btn-sm" onclick="annNext()">Next ▶</button>
+    <button class="btn btn-sm btn-primary" onclick="annSave()">Save</button>
+    <button class="btn btn-sm btn-danger" onclick="annDeleteImage()">Delete</button>
+    <button class="btn btn-sm" onclick="annJumpEmpty()">Skip empty</button>
+    <button class="btn btn-sm" onclick="annJumpLabeled()">Skip labeled</button>
+    <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+    <button class="btn btn-sm" onclick="annZoomFit()" title="Fit to window">Fit</button>
+    <button class="btn btn-sm" onclick="annZoomIn()" title="Zoom in">+</button>
+    <button class="btn btn-sm" onclick="annZoomOut()" title="Zoom out">-</button>
+    <span class="info" id="ann_zoom">100%</span>
+    <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+    <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+    <select id="ann_shape" style="padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px" title="Box shape">
+      <option value="rect">Rect</option>
+      <option value="ellipse">Ellipse</option>
+      <option value="polygon">Polygon (freehand)</option>
+    </select>
+    <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+    <button class="btn btn-sm" id="btn_ocr" onclick="annToggleOCR()">OCR</button>
+    <button class="btn btn-sm" id="btn_florence" onclick="annRunFlorence()">Florence</button>
+    <button class="btn btn-sm" id="btn_ocr_save" onclick="annSaveOCR()" title="Save OCR to JSON">Save OCR</button>
+    <button class="btn btn-sm" id="btn_ocr_batch" onclick="annBatchOCR()" title="Batch scan all images">Batch</button>
+    <button class="btn btn-sm" id="btn_ocr_folder" onclick="annOpenOCRFolder()" title="Open OCR results folder">Open Folder</button>
+    <span class="info" id="ann_fileinfo">-</span>
+  </div>
+  <div class="annotate-layout">
+    <div class="ann-sidebar">
+      <h4>Classes</h4>
+      <div class="add-class-row">
+        <input type="text" id="ann_new_class" placeholder="new class..." onkeydown="if(event.key==='Enter')annAddClass()"/>
+        <button class="btn btn-sm btn-success" onclick="annAddClass()" style="padding:3px 6px">+</button>
+      </div>
+      <div id="ann_classlist"></div>
+      <h4>Boxes <span id="ann_boxcount"></span></h4>
+      <div id="ann_boxlist"></div>
+      <h4 id="ann_ocr_header" style="display:none">OCR <span id="ann_ocrcount"></span></h4>
+      <div id="ann_ocrlist"></div>
+      <div id="ann_ocr_edit" style="display:none;margin:4px 0">
+        <input type="text" id="ann_ocr_text" style="width:100%;padding:4px 6px;background:var(--bg);color:#00ffcc;border:1px solid #00ffcc;border-radius:3px;font-size:11px;outline:none" placeholder="edit text..."/>
+      </div>
+      <h4>Navigator</h4>
+      <canvas id="ann_minimap" class="ann-minimap" title="Click to pan view"></canvas>
+      <div class="ann-help">
+        <b>Controls:</b><br>
+        <kbd>A</kbd>/<kbd>D</kbd> navigate<br>
+        <kbd>Click empty</kbd> draw box/polygon<br>
+        <kbd>Click box</kbd> select &amp; drag to move<br>
+        <kbd>Drag corner</kbd> resize<br>
+        <kbd>Right-drag</kbd> draw new box/polygon<br>
+        <kbd>Double-click</kbd> zoom in at point<br>
+        <kbd>R + drag</kbd> rotate selected<br>
+        <kbd>Del</kbd> remove box<br>
+        <kbd>0-9</kbd> change class<br>
+        <kbd>Ctrl+C</kbd> copy box (cross-image)<br>
+        <kbd>Ctrl+V</kbd> paste box<br>
+        <kbd>Ctrl+D</kbd> duplicate box<br>
+        <kbd>Ctrl+S</kbd> save<br>
+        <kbd>Shift+Del</kbd> delete image
+      </div>
+    </div>
+    <div class="ann-canvas-area">
+      <canvas id="ann_canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+const $ = id => document.getElementById(id);
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) { const t = await r.text(); throw new Error(`${r.status}: ${t}`); }
+  const ct = r.headers.get('content-type') || '';
+  return ct.includes('application/json') ? r.json() : r.text();
+}
+
+/* ── Page Navigation ── */
+let currentPage = 'agent';
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  $('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn')[{agent:0,capture:1,annotate:2}[name]].classList.add('active');
+  currentPage = name;
+  if (name === 'capture') refreshCapture();
+  if (name === 'annotate') annLoadDatasets();
+}
+
+/* ════════════════════════════════════════════════════
+   AGENT PAGE
+   ════════════════════════════════════════════════════ */
+const STORAGE_KEY = 'private_ba_assistant.dashboard.v3';
+let APP_CFG={active_profile:'default',profile:{},profiles:{},skill_options:[]};
+const DAILY_ROUTINE_TEMPLATE = `[Routine]\n【目标】蔚蓝档案：日常收菜（排除总力战/大决战/制约解除决战）\n\n【总原则】\n- 先判断当前界面，优先关闭公告/签到等阻挡弹窗。\n- 优先处理红点/可领取/确认/开始/进入/跳过/一键领取等安全按钮。\n- 绝对不要点击：总力战/大决战/制约解除决战。\n- 绝对不要点击：充值/购买/招募/抽卡/青辉石/清輝石/Pyroxene。\n\n【流程】\n1) 大厅：处理弹窗 -> 观察红点\n2) 咖啡厅：领取收益 -> 依次点击黄色感叹号 -> 返回\n3) 日程：选最优区域 -> 确认 -> 返回\n4) 社团：领取AP -> 返回\n5) 悬赏通缉：选最高难度 -> 扫荡Max -> 确认 -> 返回\n6) 战术对抗赛：仅领奖 -> 返回\n7) 清体力：活动优先扫荡；否则主线Hard扫荡到体力不足\n8) 制造：领取完成品 -> 制造 -> 返回\n9) 邮箱&任务：一键领取 -> 返回\n\n【异常处理】\n- 不确定时：wait -> 点返回/关闭尝试回大厅。`;
+
+function currentProfileName(){return ($('profile_select')?.value||APP_CFG.active_profile||'default').trim()||'default';}
+function getSkillListOrder(){
+  return Array.from(document.querySelectorAll('#skill_list .skill-row')).map(row=>row.dataset.skill).filter(Boolean);
+}
+function getSelectedSkillOrder(){
+  return Array.from(document.querySelectorAll('#skill_list .skill-row'))
+    .filter(row=>row.querySelector('input[type="checkbox"]')?.checked)
+    .map(row=>row.dataset.skill)
+    .filter(Boolean);
+}
+function updateSkillPlanStatus(){
+  const order=getSelectedSkillOrder();
+  $('skill_plan_status').textContent=order.length?`当前会执行 ${order.length} 个日常模块：${order.join(' → ')}`:'当前未启用任何日常模块';
+}
+function renderSkillList(order, selectedIds){
+  const options=APP_CFG.skill_options||[];
+  const desired=[];
+  const seen=new Set();
+  (order||[]).forEach(id=>{if(options.find(x=>x.id===id)&&!seen.has(id)){desired.push(id);seen.add(id);}});
+  options.forEach(opt=>{if(!seen.has(opt.id))desired.push(opt.id);});
+  const selected=new Set(Array.isArray(selectedIds)?selectedIds:(order||[]));
+  const el=$('skill_list');
+  el.innerHTML='';
+  desired.forEach((id,idx)=>{
+    const opt=options.find(x=>x.id===id)||{id,label:id};
+    const row=document.createElement('div');
+    row.className='skill-row'+(selected.has(id)?'':' off');
+    row.dataset.skill=id;
+    row.innerHTML=`<div class="skill-main">
+      <input type="checkbox" ${selected.has(id)?'checked':''}/>
+      <span class="skill-handle">${String(idx+1).padStart(2,'0')}</span>
+      <div>
+        <div class="skill-label">${opt.label}</div>
+        <div class="skill-id">${opt.id}</div>
+      </div>
+    </div>
+    <div class="skill-actions">
+      <button class="btn btn-sm">↑</button>
+      <button class="btn btn-sm">↓</button>
+    </div>`;
+    const cb=row.querySelector('input[type="checkbox"]');
+    cb.onchange=()=>{row.classList.toggle('off',!cb.checked);saveAgent();updateSkillPlanStatus();};
+    const [upBtn,downBtn]=row.querySelectorAll('.skill-actions button');
+    upBtn.onclick=()=>moveSkillRow(id,-1);
+    downBtn.onclick=()=>moveSkillRow(id,1);
+    const handle=row.querySelector('.skill-handle');
+    if(handle)handle.textContent=String(idx+1).padStart(2,'0');
+    upBtn.disabled=idx===0;
+    downBtn.disabled=idx===desired.length-1;
+    el.appendChild(row);
+  });
+  updateSkillPlanStatus();
+}
+function moveSkillRow(skillId,dir){
+  const order=getSkillListOrder();
+  const idx=order.indexOf(skillId);
+  if(idx<0)return;
+  const target=idx+dir;
+  if(target<0||target>=order.length)return;
+  const selected=getSelectedSkillOrder();
+  const [item]=order.splice(idx,1);
+  order.splice(target,0,item);
+  renderSkillList(order,selected);
+  saveAgent();
+}
+function fillAgentFromProfile(profile){
+  const p=profile||{};
+  if($('account_label'))$('account_label').value=p.account_label||'';
+  if($('game_exe_path'))$('game_exe_path').value=p.game_exe_path||'';
+  if($('window_title'))$('window_title').value=p.window_title||'MuMu';
+  if($('goal'))$('goal').value=p.goal||$('goal').value;
+  if($('steps'))$('steps').value=typeof p.steps==='number'?p.steps:0;
+  if($('step_sleep_s'))$('step_sleep_s').value=typeof p.step_sleep_s==='number'?p.step_sleep_s:0.6;
+  if($('ap_purchase_limit'))$('ap_purchase_limit').value=typeof p.ap_purchase_limit==='number'?p.ap_purchase_limit:0;
+  if($('dry_run'))$('dry_run').checked=Boolean(p.dry_run);
+  if($('forbid_premium_currency'))$('forbid_premium_currency').checked=p.forbid_premium_currency!==false;
+  if($('exploration_click'))$('exploration_click').checked=Boolean(p.exploration_click);
+  if($('notify_on_finish'))$('notify_on_finish').checked=Boolean(p.notify_on_finish);
+  if($('notify_webhook_url'))$('notify_webhook_url').value=p.notify_webhook_url||'';
+  renderSkillList(p.skill_order||[], p.skill_order||[]);
+}
+async function loadServerConfig(){
+  const cfg=await api('/api/v1/config');
+  APP_CFG=cfg||APP_CFG;
+  const sel=$('profile_select');
+  sel.innerHTML='';
+  Object.keys(APP_CFG.profiles||{}).forEach(name=>{
+    const opt=document.createElement('option');opt.value=name;opt.textContent=name;sel.appendChild(opt);
+  });
+  sel.value=APP_CFG.active_profile||'default';
+  fillAgentFromProfile((APP_CFG.profiles||{})[sel.value]||APP_CFG.profile||{});
+}
+async function saveProfileConfig(showText='已保存档案'){
+  const payload={
+    active_profile:currentProfileName(),
+    profile_name:currentProfileName(),
+    profile:{
+      account_label:$('account_label').value.trim(),
+      game_exe_path:$('game_exe_path').value.trim(),
+      window_title:$('window_title').value.trim(),
+      goal:$('goal').value.trim(),
+      steps:parseInt($('steps').value,10)||0,
+      step_sleep_s:parseFloat($('step_sleep_s').value)||0.6,
+      ap_purchase_limit:parseInt($('ap_purchase_limit').value,10)||0,
+      dry_run:$('dry_run').checked,
+      forbid_premium_currency:$('forbid_premium_currency').checked,
+      exploration_click:$('exploration_click').checked,
+      notify_on_finish:$('notify_on_finish').checked,
+      notify_webhook_url:$('notify_webhook_url').value.trim(),
+      target_favorites:Array.from(selectedFavorites),
+      skill_order:getSelectedSkillOrder(),
+    }
+  };
+  const res=await api('/api/v1/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  APP_CFG=res||APP_CFG;
+  if($('profile_select'))$('profile_select').value=APP_CFG.active_profile||currentProfileName();
+  $('profile_status').textContent=showText;
+  setTimeout(()=>{$('profile_status').textContent='';},1800);
+  return res;
+}
+
+function agentPayload() {
+  return {
+    _ui_rev:5,
+    active_profile:currentProfileName(),
+    account_label:$('account_label').value.trim(),
+    game_exe_path:$('game_exe_path').value.trim(),
+    window_title:$('window_title').value.trim(),
+    goal:$('goal').value.trim(),
+    steps:parseInt($('steps').value,10)||0,
+    step_sleep_s:parseFloat($('step_sleep_s').value)||0.6,
+    ap_purchase_limit:parseInt($('ap_purchase_limit').value,10)||0,
+    dry_run:$('dry_run').checked,
+    forbid_premium_currency:$('forbid_premium_currency').checked,
+    exploration_click:$('exploration_click').checked,
+    notify_on_finish:$('notify_on_finish').checked,
+    notify_webhook_url:$('notify_webhook_url').value.trim(),
+    skill_order:getSelectedSkillOrder(),
+  };
+}
+function saveAgent(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(agentPayload()))}catch(e){}try{api('/api/v1/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({active_profile:currentProfileName(),profile_name:currentProfileName(),profile:agentPayload()})})}catch(e){}}
+function loadAgent(){
+  try{
+    const s=JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(!s)return;
+    if(s.game_exe_path)$('game_exe_path').value=s.game_exe_path;
+    if(s.window_title)$('window_title').value=s.window_title;
+    if(s.goal)$('goal').value=s.goal;
+    if(typeof s.steps==='number')$('steps').value=s.steps;
+    if(typeof s.step_sleep_s==='number')$('step_sleep_s').value=s.step_sleep_s;
+    if(typeof s.ap_purchase_limit==='number')$('ap_purchase_limit').value=s.ap_purchase_limit;
+    if(s.account_label)$('account_label').value=s.account_label;
+    if(typeof s.dry_run==='boolean')$('dry_run').checked=s.dry_run;
+    if(typeof s.forbid_premium_currency==='boolean')$('forbid_premium_currency').checked=s.forbid_premium_currency;
+    if(typeof s.exploration_click==='boolean')$('exploration_click').checked=s.exploration_click;
+    if(typeof s.notify_on_finish==='boolean')$('notify_on_finish').checked=s.notify_on_finish;
+    if(s.notify_webhook_url)$('notify_webhook_url').value=s.notify_webhook_url;
+  }catch(e){}
+}
+
+async function agentRefresh(){
+  try{
+    const st=await api('/api/v1/status');
+    const out=await api('/api/v1/logs?name=agent.out.log&lines=400');
+    const err=await api('/api/v1/logs?name=agent.err.log&lines=400');
+    $('agent_out').value=out; $('agent_err').value=err;
+    const le=st.last_error?String(st.last_error).slice(0,300):'';
+    const ok=Boolean(st.agent_running)&&!le;
+    $('status_pill').className='pill '+(ok?'ok':(st.agent_running?'bad':'idle'));
+    $('status_pill').textContent=ok?'Running':(st.agent_running?'Error':'Stopped');
+    const ps=st.pipeline_status||{};
+    const pp=st.pipeline_progress||{};
+    const meta=st.pipeline_run_meta||{};
+    const curReason=pp.current_reason||'';
+    const lastRes=(pp.results&&pp.results.length)?(pp.results[pp.results.length-1].reason||''):'';
+    $('status_text').textContent=`running=${st.agent_running} profile=${meta.profile_name||ps.profile_name||'-'} account=${meta.account_label||ps.account_label||'-'} error=${le} ticks=${ps.ticks||0} reason=${curReason||lastRes||'-'}`;
+    // Pipeline HUD
+    const hud=$('routineHud');
+    if(!pp||!pp.running){hud.style.display='none';}
+    else{
+      hud.style.display='block';
+      hud.className='routine-hud';
+      $('routinePhase').textContent=pp.current_skill||'—';
+      const tot=(pp.total_skills>0)?pp.total_skills:6;
+      const si=pp.skill_index||0;
+      $('routineProgressBar').style.width=`${Math.min(((si+1)/tot)*100,100)}%`;
+      $('routineStepInfo').textContent=`Skill ${si+1}/${tot} (${pp.current_sub_state||''})`;
+      $('routineTurnInfo').textContent=`Ticks: ${pp.skill_ticks||0} / Total: ${pp.total_ticks||0}`;
+      $('routineBadge').textContent='Pipeline';
+      $('routineBadge').className='pill ok';
+      const ri=$('routineRetryInfo');
+      const reasonText=curReason||lastRes||'';
+      if(reasonText){ri.style.display='block';ri.textContent='Reason: '+reasonText;}
+      else{ri.style.display='none';ri.textContent='';}
+    }
+  }catch(e){
+    $('status_pill').className='pill bad';$('status_pill').textContent='Offline';
+    $('status_text').textContent='Status: '+e.message;
+  }
+}
+
+$('btn_start').onclick=async()=>{
+  $('status_pill').className='pill idle';$('status_pill').textContent='Starting...';
+  try{saveAgent();await saveProfileConfig('启动前已同步档案');await api('/api/v1/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(agentPayload())})}
+  catch(e){$('status_pill').className='pill bad';$('status_pill').textContent='Failed';}
+  agentRefresh();
+};
+$('btn_stop').onclick=async()=>{try{await api('/api/v1/stop',{method:'POST'})}catch(e){}agentRefresh();};
+$('btn_goal_daily').onclick=()=>{$('goal').value=DAILY_ROUTINE_TEMPLATE;saveAgent();};
+$('btn_profile_save').onclick=async()=>{try{await saveProfileConfig()}catch(e){$('profile_status').textContent='保存失败';}};
+$('btn_profile_new').onclick=async()=>{
+  const name=(prompt('输入新档案名称','default')||'').trim();
+  if(!name)return;
+  try{await api('/api/v1/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({active_profile:name,profile_name:name,profile:agentPayload()})});await loadServerConfig();await loadFavorites();saveAgent();$('profile_status').textContent='已新建档案';setTimeout(()=>{$('profile_status').textContent='';},1800);}catch(e){$('profile_status').textContent='新建失败';}
+};
+$('btn_profile_delete').onclick=async()=>{
+  const name=currentProfileName();
+  if(!name||!confirm(`删除档案 ${name} ?`))return;
+  try{await api('/api/v1/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delete_profile:name})});await loadServerConfig();await loadFavorites();saveAgent();$('profile_status').textContent='已删除档案';setTimeout(()=>{$('profile_status').textContent='';},1800);}catch(e){$('profile_status').textContent='删除失败';}
+};
+$('profile_select').onchange=async()=>{try{await api('/api/v1/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({active_profile:currentProfileName()})});await loadServerConfig();await loadFavorites();saveAgent();}catch(e){$('profile_status').textContent='切换失败';}};
+ $('btn_skills_reset').onclick=async()=>{const defaults=(APP_CFG.skill_options||[]).map(x=>x.id);renderSkillList(defaults,defaults);saveAgent();try{await api('/api/v1/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skill_order:defaults})});$('skill_plan_status').textContent='已恢复默认顺序';}catch(e){$('skill_plan_status').textContent='恢复失败';}};
+
+['game_exe_path','window_title','steps','step_sleep_s','ap_purchase_limit','goal','dry_run','forbid_premium_currency','exploration_click','account_label','notify_on_finish','notify_webhook_url'].forEach(id=>{
+  const el=$(id);if(!el)return;el.addEventListener('change',saveAgent);
+});
+
+// Favorites
+let selectedFavorites=new Set();
+async function loadFavorites(){
+  try{
+    const cr=await api('/api/v1/characters/avatars');
+    const fr=await api('/api/v1/config/favorites');
+    selectedFavorites=new Set(fr.target_favorites||[]);
+    const grid=$('char_grid');grid.innerHTML='';
+    (cr.avatars||[]).forEach(fn=>{
+      const name=decodeURIComponent(fn.replace('.png',''));
+      const d=document.createElement('div');d.className='char-item'+(selectedFavorites.has(fn)?' selected':'');
+      d.onclick=()=>{if(selectedFavorites.has(fn)){selectedFavorites.delete(fn);d.classList.remove('selected')}else{selectedFavorites.add(fn);d.classList.add('selected')}};
+      const img=document.createElement('img');img.className='char-avatar';img.src='/api/v1/captures/image?path=角色头像/'+encodeURIComponent(fn);img.loading='lazy';
+      const sp=document.createElement('span');sp.className='char-name';sp.textContent=name;
+      d.appendChild(img);d.appendChild(sp);grid.appendChild(d);
+    });
+  }catch(e){}
+}
+$('btn_save_favorites').onclick=async()=>{
+  try{$('favorites_status').textContent='Saving...';
+    await api('/api/v1/config/favorites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target_favorites:Array.from(selectedFavorites)})});
+    await saveProfileConfig('已同步收藏角色');
+    $('favorites_status').textContent='Saved!';setTimeout(()=>$('favorites_status').textContent='',2000);
+  }catch(e){$('favorites_status').textContent='Error';}
+};
+
+loadAgent();
+(async()=>{
+  try{await loadServerConfig();}catch(e){console.error(e);}
+  try{await loadFavorites();}catch(e){console.error(e);}
+  setInterval(agentRefresh,1500);
+  agentRefresh();
+})();
+
+/* ════════════════════════════════════════════════════
+   CAPTURE PAGE
+   ════════════════════════════════════════════════════ */
+let capTimer=null;
+async function refreshCapture(){
+  try{
+    const s=(await api('/api/v1/capture/status')).status;
+    $('cap_frames').textContent=s.frames||0;
+    $('cap_status_text').textContent=s.running?'Recording':'Idle';
+    $('cap_status_text').style.color=s.running?'var(--green)':'var(--muted)';
+    $('cap_dataset').textContent=s.dataset||'-';
+    $('cap_error').textContent=s.error||'';
+  }catch(e){$('cap_status_text').textContent='Offline';}
+  try{
+    const ds=await api('/api/v1/datasets');
+    const el=$('dataset_list');el.innerHTML='';
+    if(!ds.datasets||ds.datasets.length===0){el.textContent='No datasets yet.';}
+    else ds.datasets.forEach(d=>{
+      const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)';
+      row.innerHTML=`<span>${d.name}</span><span style="color:var(--accent)">${d.image_count} images</span>`;
+      row.style.cursor='pointer';
+      row.onclick=()=>{showPage('annotate');$('ann_dataset').value=d.name;annLoadDataset();};
+      el.appendChild(row);
+    });
+  }catch(e){}
+}
+$('btn_cap_start').onclick=async()=>{
+  try{
+    const r=await api('/api/v1/capture/start',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({window_title:$('cap_window').value,interval:parseFloat($('cap_interval').value)||0.5})});
+    if(capTimer)clearInterval(capTimer);
+    capTimer=setInterval(refreshCapture,500);
+    refreshCapture();
+  }catch(e){$('cap_error').textContent=e.message;}
+};
+$('btn_cap_stop').onclick=async()=>{
+  try{await api('/api/v1/capture/stop',{method:'POST'});}catch(e){}
+  if(capTimer){clearInterval(capTimer);capTimer=null;}
+  setTimeout(refreshCapture,300);
+};
+
+/* ════════════════════════════════════════════════════
+   ANNOTATE PAGE — Zoom/Pan Canvas + OCR
+   ════════════════════════════════════════════════════ */
+const COLORS=["#ef4444","#22c55e","#3b82f6","#eab308","#a855f7","#06b6d4","#f97316","#8b5cf6","#10b981","#ec4899","#84cc16","#0ea5e9","#f43f5e","#4ade80","#818cf8","#facc15","#c084fc","#2dd4bf","#fb923c","#a3e635"];
+let ANN={
+  data:[],classes:[],idx:0,selIdx:-1,drawClass:0,dirty:false,
+  imgW:1,imgH:1,bgImg:null,dataset:'',
+  dragMode:null,dragStart:null,dragOrig:null,
+  ocrBoxes:null,ocrOn:false,ocrImageW:0,ocrImageH:0,
+  // zoom/pan: offX/offY = screen offset of image origin, zoom = screen px per image px
+  zoom:1,offX:0,offY:0,fitZoom:1,
+  rotateKey:false,  // true while R is held down
+  polyPoints:null,  // freehand polygon points during drawing [{x,y}...]
+  clipboard:null    // copied label for Ctrl+C/V
+};
+const HANDLE=7;
+const ROT_HANDLE_DIST=28; // px from top-center to rotation handle
+const annCanvas=$('ann_canvas');
+const annCtx=annCanvas.getContext('2d');
+const annArea=document.querySelector('.ann-canvas-area');
+
+// ── coordinate helpers ──
+function img2scr(ix,iy){return{x:ix*ANN.zoom+ANN.offX,y:iy*ANN.zoom+ANN.offY};}
+function scr2img(sx,sy){return{x:(sx-ANN.offX)/ANN.zoom,y:(sy-ANN.offY)/ANN.zoom};}
+function annGetMouse(e){
+  const r=annCanvas.getBoundingClientRect();
+  const sx=(e.clientX-r.left)*(annCanvas.width/r.width);
+  const sy=(e.clientY-r.top)*(annCanvas.height/r.height);
+  return scr2img(sx,sy);
+}
+function annGetScreen(e){
+  const r=annCanvas.getBoundingClientRect();
+  return{x:(e.clientX-r.left)*(annCanvas.width/r.width),y:(e.clientY-r.top)*(annCanvas.height/r.height)};
+}
+
+// ── zoom/pan controls ──
+function annResizeCanvas(){
+  const cw=annArea.clientWidth, ch=annArea.clientHeight;
+  if(annCanvas.width!==cw||annCanvas.height!==ch){annCanvas.width=cw;annCanvas.height=ch;}
+}
+function annZoomFit(){
+  if(!ANN.bgImg)return;
+  annResizeCanvas();
+  const cw=annCanvas.width,ch=annCanvas.height;
+  ANN.fitZoom=Math.min(cw/ANN.imgW,ch/ANN.imgH);
+  ANN.zoom=ANN.fitZoom;
+  ANN.offX=(cw-ANN.imgW*ANN.zoom)/2;
+  ANN.offY=(ch-ANN.imgH*ANN.zoom)/2;
+  annUpdateZoomLabel();annDraw();
+}
+function annZoomTo(newZoom,pivotSx,pivotSy){
+  // pivot: screen point that stays fixed
+  const imgP=scr2img(pivotSx,pivotSy);
+  ANN.zoom=Math.max(ANN.fitZoom*0.5,Math.min(20,newZoom));
+  ANN.offX=pivotSx-imgP.x*ANN.zoom;
+  ANN.offY=pivotSy-imgP.y*ANN.zoom;
+  annUpdateZoomLabel();annDraw();
+}
+function annZoomIn(){const c=annCanvas;annZoomTo(ANN.zoom*1.3,c.width/2,c.height/2);}
+function annZoomOut(){const c=annCanvas;annZoomTo(ANN.zoom/1.3,c.width/2,c.height/2);}
+function annUpdateZoomLabel(){$('ann_zoom').textContent=Math.round(ANN.zoom/ANN.fitZoom*100)+'%';}
+
+// ── minimap ──
+const annMinimap=$('ann_minimap');
+const annMinimapCtx=annMinimap.getContext('2d');
+let _minimapDragging=false;
+
+function annDrawMinimap(){
+  if(!ANN.bgImg||!ANN.data.length)return;
+  const mw=annMinimap.parentElement.clientWidth-20;
+  const aspect=ANN.imgH/ANN.imgW;
+  const mh=Math.round(mw*aspect);
+  if(annMinimap.width!==mw||annMinimap.height!==mh){annMinimap.width=mw;annMinimap.height=mh;annMinimap.style.height=mh+'px';}
+  const ctx=annMinimapCtx;
+  const s=mw/ANN.imgW;
+  ctx.clearRect(0,0,mw,mh);
+  ctx.drawImage(ANN.bgImg,0,0,mw,mh);
+  // draw labels
+  const labels=ANN.data[ANN.idx].labels;
+  labels.forEach((lb,i)=>{
+    const color=COLORS[lb.cls%COLORS.length];
+    ctx.strokeStyle=color;ctx.lineWidth=1;ctx.globalAlpha=0.6;
+    if(lb.shape==='polygon'&&lb.points&&lb.points.length>=3){
+      ctx.beginPath();
+      ctx.moveTo(lb.points[0].x*ANN.imgW*s,lb.points[0].y*ANN.imgH*s);
+      for(let j=1;j<lb.points.length;j++) ctx.lineTo(lb.points[j].x*ANN.imgW*s,lb.points[j].y*ANN.imgH*s);
+      ctx.closePath();ctx.stroke();
+    } else {
+      const x=(lb.xc-lb.w/2)*ANN.imgW*s, y=(lb.yc-lb.h/2)*ANN.imgH*s;
+      ctx.strokeRect(x,y,lb.w*ANN.imgW*s,lb.h*ANN.imgH*s);
+    }
+  });
+  ctx.globalAlpha=1;
+  // draw viewport rectangle
+  const cw=annCanvas.width, ch=annCanvas.height;
+  const vx1=Math.max(0,-ANN.offX/ANN.zoom), vy1=Math.max(0,-ANN.offY/ANN.zoom);
+  const vx2=Math.min(ANN.imgW,(cw-ANN.offX)/ANN.zoom), vy2=Math.min(ANN.imgH,(ch-ANN.offY)/ANN.zoom);
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+  ctx.strokeRect(vx1*s,vy1*s,(vx2-vx1)*s,(vy2-vy1)*s);
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.fillRect(vx1*s,vy1*s,(vx2-vx1)*s,(vy2-vy1)*s);
+}
+
+function _minimapPanTo(e){
+  const r=annMinimap.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*(annMinimap.width/r.width);
+  const my=(e.clientY-r.top)*(annMinimap.height/r.height);
+  const s=annMinimap.width/ANN.imgW;
+  const imgX=mx/s, imgY=my/s;
+  // center the main canvas on this image point
+  ANN.offX=annCanvas.width/2-imgX*ANN.zoom;
+  ANN.offY=annCanvas.height/2-imgY*ANN.zoom;
+  annDraw();
+}
+
+annMinimap.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  annMinimap.setPointerCapture(e.pointerId);
+  _minimapDragging=true;
+  _minimapPanTo(e);
+});
+annMinimap.addEventListener('pointermove',e=>{
+  if(!_minimapDragging)return;
+  _minimapPanTo(e);
+});
+annMinimap.addEventListener('pointerup',e=>{
+  _minimapDragging=false;
+});
+
+// double-click on main canvas to zoom in at point
+annCanvas.addEventListener('dblclick',e=>{
+  if(!ANN.bgImg)return;
+  e.preventDefault();
+  const scr=annGetScreen(e);
+  annZoomTo(ANN.zoom*2.5,scr.x,scr.y);
+});
+
+// ── data loading ──
+async function annLoadDatasets(){
+  try{
+    const ds=await api('/api/v1/datasets');
+    const sel=$('ann_dataset');const cur=sel.value;
+    sel.innerHTML='<option value="">Select dataset...</option>';
+    (ds.datasets||[]).forEach(d=>{const o=document.createElement('option');o.value=d.name;o.textContent=`${d.name} (${d.image_count})`;sel.appendChild(o);});
+    if(cur)sel.value=cur;
+  }catch(e){}
+}
+$('ann_dataset').onchange=()=>annLoadDataset();
+
+async function annLoadDataset(){
+  const ds=$('ann_dataset').value;if(!ds)return;
+  ANN.dataset=ds;
+  try{
+    const r=await api('/api/v1/datasets/images?dataset='+encodeURIComponent(ds));
+    ANN.data=r.images||[];ANN.classes=r.classes||[];
+    ANN.idx=0;ANN.selIdx=-1;ANN.dirty=false;
+    annBuildClassList();annLoadImage();
+  }catch(e){console.error(e);}
+}
+
+function annBuildClassList(){
+  const el=$('ann_classlist');el.innerHTML='';
+  ANN.classes.forEach((name,i)=>{
+    const d=document.createElement('div');d.className='class-item'+(i===ANN.drawClass?' sel':'');
+    d.innerHTML=`<div class="class-dot" style="background:${COLORS[i%COLORS.length]}"></div>${i}: ${name}`;
+    d.onclick=()=>{ANN.drawClass=i;annBuildClassList();};el.appendChild(d);
+  });
+}
+function annBuildBoxList(){
+  const el=$('ann_boxlist');el.innerHTML='';if(!ANN.data.length)return;
+  const labels=ANN.data[ANN.idx].labels;$('ann_boxcount').textContent=`(${labels.length})`;
+  labels.forEach((lb,i)=>{
+    const d=document.createElement('div');d.className='box-item'+(i===ANN.selIdx?' sel':'');
+    const cn=ANN.classes[lb.cls]||`cls_${lb.cls}`;
+    d.innerHTML=`<div class="class-dot" style="background:${COLORS[lb.cls%COLORS.length]}"></div>${cn}`;
+    d.onclick=()=>{ANN.selIdx=i;annDraw();};el.appendChild(d);
+  });
+}
+
+function annLoadImage(){
+  if(!ANN.data.length){annDraw();return;}
+  ANN.selIdx=-1;ocrSelIdx=-1;
+  ANN.bgImg=new Image();
+  ANN.bgImg.onload=()=>{
+    ANN.imgW=ANN.bgImg.width;ANN.imgH=ANN.bgImg.height;annZoomFit();
+    annUpdateOCRUI();annDraw();
+    // auto-scan if OCR on and this image has no OCR yet
+    if(ANN.ocrOn&&!annCurImg().ocr) annRunOCR();
+  };
+  ANN.bgImg.src=`/api/v1/datasets/image?dataset=${encodeURIComponent(ANN.dataset)}&filename=${encodeURIComponent(ANN.data[ANN.idx].img)}`;
+}
+function annCurImg(){return ANN.data[ANN.idx]||{};}
+
+// ── main draw (everything in screen space via zoom/pan transform) ──
+function annDraw(){
+  if(!ANN.bgImg||!ANN.data.length)return;
+  annResizeCanvas();
+  const ctx=annCtx,Z=ANN.zoom,ox=ANN.offX,oy=ANN.offY;
+  ctx.clearRect(0,0,annCanvas.width,annCanvas.height);
+  // checkerboard bg (optional, skip for speed)
+  // draw image
+  ctx.drawImage(ANN.bgImg,ox,oy,ANN.imgW*Z,ANN.imgH*Z);
+
+  // draw YOLO labels (with rotation + shape + polygon support)
+  const labels=ANN.data[ANN.idx].labels;
+  labels.forEach((lb,i)=>{
+    const color=COLORS[lb.cls%COLORS.length];const isSel=(i===ANN.selIdx);
+    const shape=lb.shape||'rect';
+
+    // ── Polygon shape ──
+    if(shape==='polygon'&&lb.points&&lb.points.length>=3){
+      ctx.save();
+      ctx.beginPath();
+      const p0=img2scr(lb.points[0].x*ANN.imgW,lb.points[0].y*ANN.imgH);
+      ctx.moveTo(p0.x,p0.y);
+      for(let j=1;j<lb.points.length;j++){const pj=img2scr(lb.points[j].x*ANN.imgW,lb.points[j].y*ANN.imgH);ctx.lineTo(pj.x,pj.y);}
+      ctx.closePath();
+      ctx.fillStyle=color;ctx.globalAlpha=isSel?0.25:0.1;ctx.fill();ctx.globalAlpha=1;
+      ctx.strokeStyle=color;ctx.lineWidth=isSel?3:1.5;ctx.setLineDash([]);ctx.stroke();
+      // label text at bounding box top-left
+      const xs=lb.points.map(p=>p.x*ANN.imgW),ys=lb.points.map(p=>p.y*ANN.imgH);
+      const lbl_scr=img2scr(Math.min(...xs),Math.min(...ys));
+      const fs=Math.max(10,12);ctx.font=fs+'px sans-serif';
+      const cn=ANN.classes[lb.cls]||`cls_${lb.cls}`;
+      const labelText=cn+` [poly ${lb.points.length}pt]`;
+      const tm=ctx.measureText(labelText);ctx.fillStyle=color;ctx.globalAlpha=0.85;ctx.fillRect(lbl_scr.x,lbl_scr.y-fs-4,tm.width+6,fs+4);
+      ctx.globalAlpha=1;ctx.fillStyle='#fff';ctx.fillText(labelText,lbl_scr.x+3,lbl_scr.y-4);
+      if(isSel){
+        // vertex handles (white)
+        lb.points.forEach(p=>{
+          const ps=img2scr(p.x*ANN.imgW,p.y*ANN.imgH);
+          ctx.fillStyle='#fff';ctx.strokeStyle=color;ctx.lineWidth=2;
+          ctx.beginPath();ctx.arc(ps.x,ps.y,HANDLE-1,0,Math.PI*2);ctx.fill();ctx.stroke();
+        });
+        // bounding-box corner handles (cyan, for uniform scale)
+        const bxs=lb.points.map(p=>p.x*ANN.imgW),bys=lb.points.map(p=>p.y*ANN.imgH);
+        const bbx1=Math.min(...bxs),bby1=Math.min(...bys),bbx2=Math.max(...bxs),bby2=Math.max(...bys);
+        for(const[cx,cy] of [[bbx1,bby1],[bbx2,bby1],[bbx1,bby2],[bbx2,bby2]]){
+          const cs=img2scr(cx,cy);
+          ctx.fillStyle='#06b6d4';ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+          ctx.beginPath();ctx.rect(cs.x-HANDLE+1,cs.y-HANDLE+1,(HANDLE-1)*2,(HANDLE-1)*2);ctx.fill();ctx.stroke();
+        }
+        // rotation handle (yellow, above top center)
+        const rtx=(bbx1+bbx2)/2, rty=bby1-ROT_HANDLE_DIST/Z;
+        const rts=img2scr(rtx,rty), rtb=img2scr((bbx1+bbx2)/2,bby1);
+        ctx.strokeStyle='#ffff00';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(rtb.x,rtb.y);ctx.lineTo(rts.x,rts.y);ctx.stroke();
+        ctx.fillStyle='#ffff00';ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(rts.x,rts.y,HANDLE+1,0,Math.PI*2);ctx.fill();ctx.stroke();
+      }
+      ctx.restore();
+      return; // skip rect/ellipse path
+    }
+
+    // ── Rect / Ellipse shape ──
+    const cx_scr=lb.xc*ANN.imgW*Z+ox, cy_scr=lb.yc*ANN.imgH*Z+oy;
+    const bw=lb.w*ANN.imgW*Z, bh=lb.h*ANN.imgH*Z;
+    const angle=lb.angle||0;
+    ctx.save();
+    ctx.translate(cx_scr,cy_scr);
+    ctx.rotate(angle);
+    if(shape==='ellipse'){
+      ctx.fillStyle=color;ctx.globalAlpha=isSel?0.25:0.1;
+      ctx.beginPath();ctx.ellipse(0,0,bw/2,bh/2,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      ctx.strokeStyle=color;ctx.lineWidth=isSel?3:1.5;ctx.setLineDash([]);ctx.stroke();
+    } else {
+      ctx.fillStyle=color;ctx.globalAlpha=isSel?0.25:0.1;ctx.fillRect(-bw/2,-bh/2,bw,bh);ctx.globalAlpha=1;
+      ctx.strokeStyle=color;ctx.lineWidth=isSel?3:1.5;ctx.setLineDash([]);ctx.strokeRect(-bw/2,-bh/2,bw,bh);
+    }
+    // label text (always horizontal, drawn at top-left of rotated box)
+    const fs=Math.max(10,12);ctx.font=fs+'px sans-serif';
+    const cn=ANN.classes[lb.cls]||`cls_${lb.cls}`;
+    const shapeTag=(shape!=='rect'||angle)?` [${shape}${angle?(' '+Math.round(angle*180/Math.PI)+'\u00b0'):''}]`:'';// eslint-disable-line no-useless-escape
+    const labelText=cn+shapeTag;
+    const tm=ctx.measureText(labelText);ctx.fillStyle=color;ctx.globalAlpha=0.85;ctx.fillRect(-bw/2,-bh/2-fs-4,tm.width+6,fs+4);
+    ctx.globalAlpha=1;ctx.fillStyle='#fff';ctx.fillText(labelText,-bw/2+3,-bh/2-4);
+    if(isSel){
+      // corner handles
+      [[-bw/2,-bh/2],[bw/2,-bh/2],[-bw/2,bh/2],[bw/2,bh/2]].forEach(([hx,hy])=>{
+        ctx.fillStyle='#fff';ctx.strokeStyle=color;ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(hx,hy,HANDLE,0,Math.PI*2);ctx.fill();ctx.stroke();
+      });
+      // rotation handle (above top center)
+      ctx.strokeStyle='#ffff00';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(0,-bh/2);ctx.lineTo(0,-bh/2-ROT_HANDLE_DIST);ctx.stroke();
+      ctx.fillStyle='#ffff00';ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(0,-bh/2-ROT_HANDLE_DIST,HANDLE+1,0,Math.PI*2);ctx.fill();ctx.stroke();
+    }
+    ctx.restore();
+  });
+
+  // draw OCR overlay
+  const _ocrData=annCurImg().ocr;
+  if(ANN.ocrOn&&_ocrData&&_ocrData.boxes){
+    _ocrData.boxes.forEach((ob,oi)=>{
+      const sx=ob.x1*ANN.imgW*Z+ox, sy=ob.y1*ANN.imgH*Z+oy;
+      const sw=(ob.x2-ob.x1)*ANN.imgW*Z, sh=(ob.y2-ob.y1)*ANN.imgH*Z;
+      const isSel=(oi===ocrSelIdx);
+      ctx.strokeStyle=isSel?'#ffff00':'#00ffcc';ctx.lineWidth=isSel?2.5:1.5;
+      ctx.setLineDash(isSel?[]:[3,3]);ctx.strokeRect(sx,sy,sw,sh);ctx.setLineDash([]);
+      if(isSel){ctx.fillStyle='#ffff00';ctx.globalAlpha=0.15;ctx.fillRect(sx,sy,sw,sh);ctx.globalAlpha=1;}
+      const fs=Math.max(9,11);ctx.font=fs+'px sans-serif';
+      const label=`${ob.text} (${(ob.confidence*100).toFixed(0)}%)`;
+      const tm2=ctx.measureText(label);
+      ctx.fillStyle=isSel?'rgba(80,80,0,0.9)':'rgba(0,0,0,0.8)';ctx.fillRect(sx,sy+sh,tm2.width+4,fs+4);
+      ctx.fillStyle=isSel?'#ffff00':'#00ffcc';ctx.fillText(label,sx+2,sy+sh+fs);
+    });
+  }
+
+  // draw in-progress box or freehand polygon
+  if(ANN.dragMode==='draw'&&ANN.dragStart&&ANN.dragOrig){
+    const s1=img2scr(ANN.dragStart.x,ANN.dragStart.y),s2=img2scr(ANN.dragOrig.x,ANN.dragOrig.y);
+    const dx1=Math.min(s1.x,s2.x),dy1=Math.min(s1.y,s2.y);
+    const dw=Math.abs(s1.x-s2.x),dh=Math.abs(s1.y-s2.y);
+    ctx.strokeStyle=COLORS[ANN.drawClass%COLORS.length];ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.strokeRect(dx1,dy1,dw,dh);ctx.setLineDash([]);
+  }
+  if(ANN.dragMode==='draw_poly'&&ANN.polyPoints&&ANN.polyPoints.length>1){
+    ctx.strokeStyle=COLORS[ANN.drawClass%COLORS.length];ctx.lineWidth=2;ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    const p0=img2scr(ANN.polyPoints[0].x,ANN.polyPoints[0].y);
+    ctx.moveTo(p0.x,p0.y);
+    for(let i=1;i<ANN.polyPoints.length;i++){const pi=img2scr(ANN.polyPoints[i].x,ANN.polyPoints[i].y);ctx.lineTo(pi.x,pi.y);}
+    ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=COLORS[ANN.drawClass%COLORS.length];ctx.globalAlpha=0.15;ctx.fill();ctx.globalAlpha=1;
+  }
+
+  // update info
+  $('ann_counter').textContent=`${ANN.idx+1} / ${ANN.data.length}`;
+  $('ann_fileinfo').textContent=ANN.data.length?`${ANN.data[ANN.idx].img} | ${labels.length} boxes | ${ANN.imgW}×${ANN.imgH}px${ANN.dirty?' [unsaved]':''}`:'-';
+  annBuildBoxList();
+  annDrawMinimap();
+}
+
+// ── rotation-aware coordinate helpers ──
+function _rotatePoint(px,py,cx,cy,angle){
+  const cos=Math.cos(-angle),sin=Math.sin(-angle);
+  const dx=px-cx,dy=py-cy;
+  return{x:cx+dx*cos-dy*sin, y:cy+dx*sin+dy*cos};
+}
+function _toLocalBox(ix,iy,lb){
+  // transform image-space point into box-local space (unrotated, origin at box center)
+  const cx=lb.xc*ANN.imgW, cy=lb.yc*ANN.imgH;
+  const angle=lb.angle||0;
+  const r=_rotatePoint(ix,iy,cx,cy,angle);
+  return{x:r.x-cx, y:r.y-cy};
+}
+
+// ── hit testing (in image space, rotation-aware) ──
+function annHitHandle(ix,iy){
+  if(ANN.selIdx<0)return null;
+  const lb=ANN.data[ANN.idx].labels[ANN.selIdx];
+  if((lb.shape||'rect')==='polygon'&&lb.points&&lb.points.length>=3){
+    const thr=(HANDLE+3)/ANN.zoom;
+    // vertex handles first (highest priority)
+    for(let i=0;i<lb.points.length;i++){
+      const px=lb.points[i].x*ANN.imgW, py=lb.points[i].y*ANN.imgH;
+      if(Math.hypot(ix-px,iy-py)<=thr)return 'poly-vertex-'+i;
+    }
+    // bounding-box corner handles for uniform scale
+    const xs=lb.points.map(p=>p.x*ANN.imgW),ys=lb.points.map(p=>p.y*ANN.imgH);
+    const bx1=Math.min(...xs),by1=Math.min(...ys),bx2=Math.max(...xs),by2=Math.max(...ys);
+    for(const[hx,hy,tag] of [[bx1,by1,'poly-scale-tl'],[bx2,by1,'poly-scale-tr'],[bx1,by2,'poly-scale-bl'],[bx2,by2,'poly-scale-br']])
+      if(Math.hypot(ix-hx,iy-hy)<=thr)return tag;
+    // rotation handle (above top center of bounding box)
+    const rcx=(bx1+bx2)/2, rcy=by1-ROT_HANDLE_DIST/ANN.zoom;
+    if(Math.hypot(ix-rcx,iy-rcy)<=thr+3/ANN.zoom)return 'poly-rotate';
+    return null;
+  }
+  const hw=lb.w*ANN.imgW/2, hh=lb.h*ANN.imgH/2;
+  const local=_toLocalBox(ix,iy,lb);
+  const thr=(HANDLE+3)/ANN.zoom;
+  // rotation handle (above top center in local space)
+  const rotY=-hh-ROT_HANDLE_DIST/ANN.zoom;
+  if(Math.hypot(local.x-0,local.y-rotY)<=thr+3/ANN.zoom)return 'rotate';
+  // corner handles
+  for(const[hx,hy,tag] of [[-hw,-hh,'resize-tl'],[hw,-hh,'resize-tr'],[-hw,hh,'resize-bl'],[hw,hh,'resize-br']])
+    if(Math.hypot(local.x-hx,local.y-hy)<=thr)return tag;
+  return null;
+}
+function annHitBox(ix,iy){
+  const labels=ANN.data[ANN.idx].labels;
+  for(let i=labels.length-1;i>=0;i--){
+    const lb=labels[i];
+    if((lb.shape||'rect')==='polygon'&&lb.points&&lb.points.length>=3){
+      if(_pointInPolygon(ix,iy,lb.points.map(p=>({x:p.x*ANN.imgW,y:p.y*ANN.imgH}))))return i;
+      continue;
+    }
+    const hw=lb.w*ANN.imgW/2, hh=lb.h*ANN.imgH/2;
+    const local=_toLocalBox(ix,iy,lb);
+    if(lb.shape==='ellipse'){
+      if((local.x*local.x)/(hw*hw)+(local.y*local.y)/(hh*hh)<=1)return i;
+    } else {
+      if(local.x>=-hw&&local.x<=hw&&local.y>=-hh&&local.y<=hh)return i;
+    }
+  }
+  return -1;
+}
+
+// Point-in-polygon (ray casting)
+function _pointInPolygon(px,py,pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i].x,yi=pts[i].y,xj=pts[j].x,yj=pts[j].y;
+    if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+
+// Update polygon bounding box from points
+function _updatePolyBBox(lb){
+  if(!lb.points||lb.points.length<3)return;
+  const xs=lb.points.map(p=>p.x),ys=lb.points.map(p=>p.y);
+  const bx1=Math.min(...xs),by1=Math.min(...ys),bx2=Math.max(...xs),by2=Math.max(...ys);
+  lb.xc=(bx1+bx2)/2;lb.yc=(by1+by2)/2;lb.w=bx2-bx1;lb.h=by2-by1;
+}
+
+// Simplify polygon (Ramer-Douglas-Peucker)
+function _simplifyPoly(pts,epsilon){
+  if(pts.length<=2)return pts;
+  let maxDist=0,maxIdx=0;
+  const start=pts[0],end=pts[pts.length-1];
+  for(let i=1;i<pts.length-1;i++){
+    const d=_pointLineDist(pts[i],start,end);
+    if(d>maxDist){maxDist=d;maxIdx=i;}
+  }
+  if(maxDist>epsilon){
+    const left=_simplifyPoly(pts.slice(0,maxIdx+1),epsilon);
+    const right=_simplifyPoly(pts.slice(maxIdx),epsilon);
+    return left.slice(0,-1).concat(right);
+  }
+  return[start,end];
+}
+function _pointLineDist(p,a,b){
+  const dx=b.x-a.x,dy=b.y-a.y;
+  const len2=dx*dx+dy*dy;
+  if(len2===0)return Math.hypot(p.x-a.x,p.y-a.y);
+  let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/len2;
+  t=Math.max(0,Math.min(1,t));
+  return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));
+}
+
+// ── mouse events ──
+annCanvas.addEventListener('pointerdown',e=>{
+  if(!ANN.data.length)return;
+  // middle button = pan
+  if(e.button===1){e.preventDefault();ANN.dragMode='pan';ANN.dragStart=annGetScreen(e);ANN.dragOrig={offX:ANN.offX,offY:ANN.offY};annCanvas.setPointerCapture(e.pointerId);return;}
+  const pos=annGetMouse(e);
+  // right-click = draw (any shape)
+  if(e.button===2){
+    e.preventDefault();
+    annCanvas.setPointerCapture(e.pointerId);
+    const shape=($('ann_shape')||{}).value||'rect';
+    if(shape==='polygon'){ANN.dragMode='draw_poly';ANN.polyPoints=[pos];return;}
+    ANN.dragMode='draw';ANN.dragStart=pos;ANN.dragOrig=pos;return;
+  }
+  // left-click: try handle/box hit first, then fall through to draw if nothing hit
+  const h=annHitHandle(pos.x,pos.y);
+  if(h){ANN.dragMode=h;ANN.dragStart=pos;const lb=ANN.data[ANN.idx].labels[ANN.selIdx];ANN.dragOrig={xc:lb.xc,yc:lb.yc,w:lb.w,h:lb.h,angle:lb.angle||0,points:lb.points?lb.points.map(p=>({x:p.x,y:p.y})):null};annCanvas.setPointerCapture(e.pointerId);return;}
+  const hit=annHitBox(pos.x,pos.y);
+  if(hit>=0){ANN.selIdx=hit;ocrSelIdx=-1;annUpdateOCRUI();annDraw();ANN.dragMode='move';ANN.dragStart=pos;const lb=ANN.data[ANN.idx].labels[hit];ANN.dragOrig={xc:lb.xc,yc:lb.yc,w:lb.w,h:lb.h,points:lb.points?lb.points.map(p=>({x:p.x,y:p.y})):null};annCanvas.setPointerCapture(e.pointerId);return;}
+  // check OCR box hit
+  const ocrHit=annHitOCR(pos.x,pos.y);
+  if(ocrHit>=0){ocrSelIdx=ocrHit;ANN.selIdx=-1;annUpdateOCRUI();annDraw();return;}
+  // left-click on empty space = draw (same as right-click)
+  annCanvas.setPointerCapture(e.pointerId);
+  const shape=($('ann_shape')||{}).value||'rect';
+  if(shape==='polygon'){ANN.dragMode='draw_poly';ANN.polyPoints=[pos];ANN.selIdx=-1;annDraw();return;}
+  ANN.dragMode='draw';ANN.dragStart=pos;ANN.dragOrig=pos;ANN.selIdx=-1;annDraw();
+});
+annCanvas.addEventListener('pointermove',e=>{
+  if(!ANN.dragMode)return;
+  if(ANN.dragMode==='pan'){
+    const cur=annGetScreen(e);
+    ANN.offX=ANN.dragOrig.offX+(cur.x-ANN.dragStart.x);
+    ANN.offY=ANN.dragOrig.offY+(cur.y-ANN.dragStart.y);
+    annDraw();return;
+  }
+  const pos=annGetMouse(e);
+  if(ANN.dragMode==='draw'){ANN.dragOrig=pos;annDraw();return;}
+  if(ANN.dragMode==='draw_poly'){ANN.polyPoints.push(pos);annDraw();return;}
+  if(!ANN.dragStart)return;
+  const dx=pos.x-ANN.dragStart.x, dy=pos.y-ANN.dragStart.y;
+  if(ANN.selIdx<0||!ANN.dragOrig)return;
+  const lb=ANN.data[ANN.idx].labels[ANN.selIdx];
+  if(ANN.dragMode==='rotate'){
+    // Compute angle from box center to current mouse position
+    const cx=lb.xc*ANN.imgW, cy=lb.yc*ANN.imgH;
+    const angle=Math.atan2(pos.x-cx,-(pos.y-cy)); // 0 = up
+    lb.angle=angle;ANN.dirty=true;annDraw();return;
+  }
+  if(ANN.dragMode==='move'){
+    lb.xc=ANN.dragOrig.xc+dx/ANN.imgW;lb.yc=ANN.dragOrig.yc+dy/ANN.imgH;
+    if(lb.shape==='polygon'&&lb.points&&ANN.dragOrig.points){
+      const ddx=dx/ANN.imgW,ddy=dy/ANN.imgH;
+      for(let i=0;i<lb.points.length;i++){lb.points[i].x=ANN.dragOrig.points[i].x+ddx;lb.points[i].y=ANN.dragOrig.points[i].y+ddy;}
+    }
+    ANN.dirty=true;annDraw();return;
+  }
+  // Polygon vertex drag
+  if(ANN.dragMode.startsWith('poly-vertex-')&&lb.shape==='polygon'&&lb.points&&ANN.dragOrig.points){
+    const vi=parseInt(ANN.dragMode.split('-')[2]);
+    if(vi>=0&&vi<lb.points.length){
+      lb.points[vi].x=ANN.dragOrig.points[vi].x+dx/ANN.imgW;
+      lb.points[vi].y=ANN.dragOrig.points[vi].y+dy/ANN.imgH;
+      _updatePolyBBox(lb);
+    }
+    ANN.dirty=true;annDraw();return;
+  }
+  // Polygon uniform scale (corner drag)
+  if(ANN.dragMode.startsWith('poly-scale-')&&lb.shape==='polygon'&&lb.points&&ANN.dragOrig.points){
+    const cx=ANN.dragOrig.xc, cy=ANN.dragOrig.yc;
+    const origXs=ANN.dragOrig.points.map(p=>p.x),origYs=ANN.dragOrig.points.map(p=>p.y);
+    const origW=Math.max(...origXs)-Math.min(...origXs), origH=Math.max(...origYs)-Math.min(...origYs);
+    if(origW>0&&origH>0){
+      const corner=ANN.dragMode.slice(11); // tl/tr/bl/br
+      const oCornerX=corner.endsWith('r')?Math.max(...origXs):Math.min(...origXs);
+      const oCornerY=corner.startsWith('b')?Math.max(...origYs):Math.min(...origYs);
+      const newCornerX=oCornerX+dx/ANN.imgW, newCornerY=oCornerY+dy/ANN.imgH;
+      const sx=Math.abs(newCornerX-cx)/Math.abs(oCornerX-cx)||1;
+      const sy=Math.abs(newCornerY-cy)/Math.abs(oCornerY-cy)||1;
+      const s=Math.max(0.1,Math.min(sx,sy)); // uniform scale
+      for(let i=0;i<lb.points.length;i++){
+        lb.points[i].x=cx+(ANN.dragOrig.points[i].x-cx)*s;
+        lb.points[i].y=cy+(ANN.dragOrig.points[i].y-cy)*s;
+      }
+      _updatePolyBBox(lb);
+    }
+    ANN.dirty=true;annDraw();return;
+  }
+  // Polygon rotation
+  if(ANN.dragMode==='poly-rotate'&&lb.shape==='polygon'&&lb.points&&ANN.dragOrig.points){
+    const cx=ANN.dragOrig.xc*ANN.imgW, cy=ANN.dragOrig.yc*ANN.imgH;
+    const angle=Math.atan2(pos.x-cx,-(pos.y-cy));
+    const origAngle=Math.atan2(ANN.dragStart.x-cx,-(ANN.dragStart.y-cy));
+    const da=angle-origAngle;
+    const cosA=Math.cos(da),sinA=Math.sin(da);
+    for(let i=0;i<lb.points.length;i++){
+      const ox=ANN.dragOrig.points[i].x*ANN.imgW-cx, oy=ANN.dragOrig.points[i].y*ANN.imgH-cy;
+      lb.points[i].x=(cx+ox*cosA-oy*sinA)/ANN.imgW;
+      lb.points[i].y=(cy+ox*sinA+oy*cosA)/ANN.imgH;
+    }
+    _updatePolyBBox(lb);
+    ANN.dirty=true;annDraw();return;
+  }
+  // Resize in local (unrotated) space
+  const angle=lb.angle||0;
+  const cos=Math.cos(-angle),sin=Math.sin(-angle);
+  const ldx=dx*cos-dy*sin, ldy=dx*sin+dy*cos;
+  let ox1=(ANN.dragOrig.xc-ANN.dragOrig.w/2)*ANN.imgW, oy1=(ANN.dragOrig.yc-ANN.dragOrig.h/2)*ANN.imgH;
+  let ox2=ox1+ANN.dragOrig.w*ANN.imgW, oy2=oy1+ANN.dragOrig.h*ANN.imgH;
+  if(ANN.dragMode==='resize-tl'){ox1+=ldx;oy1+=ldy;}if(ANN.dragMode==='resize-tr'){ox2+=ldx;oy1+=ldy;}
+  if(ANN.dragMode==='resize-bl'){ox1+=ldx;oy2+=ldy;}if(ANN.dragMode==='resize-br'){ox2+=ldx;oy2+=ldy;}
+  const nx1=Math.min(ox1,ox2),ny1=Math.min(oy1,oy2),nx2=Math.max(ox1,ox2),ny2=Math.max(oy1,oy2);
+  lb.w=(nx2-nx1)/ANN.imgW;lb.h=(ny2-ny1)/ANN.imgH;lb.xc=(nx1+nx2)/2/ANN.imgW;lb.yc=(ny1+ny2)/2/ANN.imgH;
+  ANN.dirty=true;annDraw();
+});
+annCanvas.addEventListener('pointerup',e=>{
+  if(ANN.dragMode==='draw_poly'&&ANN.polyPoints&&ANN.polyPoints.length>=2){
+    // Simplify freehand path: cap epsilon to avoid over-simplification when zoomed out
+    const epsilon=Math.min(2/ANN.zoom, 4);
+    let simplified=_simplifyPoly(ANN.polyPoints,epsilon);
+    // Fallback: if RDP reduced to < 3 points but we had enough raw points,
+    // keep evenly-spaced subset to preserve the polygon shape
+    if(simplified.length<3&&ANN.polyPoints.length>=3){
+      const raw=ANN.polyPoints;
+      const step=Math.max(1,Math.floor(raw.length/Math.min(raw.length,12)));
+      simplified=[];for(let i=0;i<raw.length;i+=step)simplified.push(raw[i]);
+      if(simplified[simplified.length-1]!==raw[raw.length-1])simplified.push(raw[raw.length-1]);
+    }
+    if(simplified.length>=3){
+      // Normalize to 0-1
+      const npts=simplified.map(p=>({x:p.x/ANN.imgW,y:p.y/ANN.imgH}));
+      // Compute bounding box for xc/yc/w/h fallback
+      const xs=npts.map(p=>p.x),ys=npts.map(p=>p.y);
+      const bx1=Math.min(...xs),by1=Math.min(...ys),bx2=Math.max(...xs),by2=Math.max(...ys);
+      ANN.data[ANN.idx].labels.push({cls:ANN.drawClass,xc:(bx1+bx2)/2,yc:(by1+by2)/2,w:bx2-bx1,h:by2-by1,angle:0,shape:'polygon',points:npts});
+      ANN.selIdx=ANN.data[ANN.idx].labels.length-1;ANN.dirty=true;
+    } else { console.warn('[Annotator] freehand polygon discarded: only',simplified.length,'points after simplify from',ANN.polyPoints.length,'raw'); }
+    ANN.polyPoints=null;
+  }
+  if(ANN.dragMode==='draw'&&ANN.dragStart&&ANN.dragOrig){
+    const bx1=Math.min(ANN.dragStart.x,ANN.dragOrig.x),by1=Math.min(ANN.dragStart.y,ANN.dragOrig.y);
+    const bw=Math.abs(ANN.dragStart.x-ANN.dragOrig.x),bh=Math.abs(ANN.dragStart.y-ANN.dragOrig.y);
+    if(bw>3&&bh>3){
+      const shape=($('ann_shape')||{}).value||'rect';
+      ANN.data[ANN.idx].labels.push({cls:ANN.drawClass,xc:(bx1+bw/2)/ANN.imgW,yc:(by1+bh/2)/ANN.imgH,w:bw/ANN.imgW,h:bh/ANN.imgH,angle:0,shape:shape});
+      ANN.selIdx=ANN.data[ANN.idx].labels.length-1;ANN.dirty=true;
+    }
+  }
+  ANN.dragMode=null;ANN.dragStart=null;ANN.dragOrig=null;ANN.polyPoints=null;annDraw();
+});
+annCanvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+// scroll to zoom
+annCanvas.addEventListener('wheel',e=>{
+  if(!ANN.bgImg)return;e.preventDefault();
+  const scr=annGetScreen(e);
+  const factor=e.deltaY<0?1.15:1/1.15;
+  annZoomTo(ANN.zoom*factor,scr.x,scr.y);
+},{passive:false});
+
+// keyboard
+document.addEventListener('keydown',e=>{
+  if(currentPage!=='annotate'||!ANN.data.length)return;
+  if(e.ctrlKey&&e.key==='s'){e.preventDefault();annSave();return;}
+  if(e.ctrlKey&&e.key==='c'&&ANN.selIdx>=0){e.preventDefault();ANN.clipboard=JSON.parse(JSON.stringify(ANN.data[ANN.idx].labels[ANN.selIdx]));return;}
+  if(e.ctrlKey&&e.key==='v'&&ANN.clipboard){e.preventDefault();const cp=JSON.parse(JSON.stringify(ANN.clipboard));cp.xc+=0.03;cp.yc+=0.03;if(cp.points)cp.points=cp.points.map(p=>({x:p.x+0.03,y:p.y+0.03}));ANN.data[ANN.idx].labels.push(cp);ANN.selIdx=ANN.data[ANN.idx].labels.length-1;ANN.dirty=true;annDraw();return;}
+  if(e.ctrlKey&&e.key==='d'&&ANN.selIdx>=0){e.preventDefault();const cp=JSON.parse(JSON.stringify(ANN.data[ANN.idx].labels[ANN.selIdx]));cp.xc+=0.03;cp.yc+=0.03;if(cp.points)cp.points=cp.points.map(p=>({x:p.x+0.03,y:p.y+0.03}));ANN.data[ANN.idx].labels.push(cp);ANN.selIdx=ANN.data[ANN.idx].labels.length-1;ANN.dirty=true;annDraw();return;}
+  if(e.ctrlKey&&e.key==='0'){e.preventDefault();annZoomFit();return;}
+  if(e.key==='d'||e.key==='ArrowRight'){annNext();return;}
+  if(e.key==='a'||e.key==='ArrowLeft'){annPrev();return;}
+  if(e.key==='='||e.key==='+'){annZoomIn();return;}
+  if(e.key==='-'){annZoomOut();return;}
+  if(e.shiftKey&&e.key==='Delete'){e.preventDefault();annDeleteImage();return;}
+  if((e.key==='Delete'||e.key==='Backspace')&&ocrSelIdx>=0){annDeleteOCRBox();return;}
+  if((e.key==='Delete'||e.key==='Backspace')&&ANN.selIdx>=0){ANN.data[ANN.idx].labels.splice(ANN.selIdx,1);ANN.selIdx=-1;ANN.dirty=true;annDraw();return;}
+  if(/^[0-9]$/.test(e.key)&&ANN.selIdx>=0&&!e.ctrlKey){ANN.data[ANN.idx].labels[ANN.selIdx].cls=parseInt(e.key);ANN.dirty=true;annDraw();return;}
+});
+
+// navigation
+function annAutoSave(fn){if(ANN.dirty)annSave();fn();annLoadImage();}
+function annNext(){annAutoSave(()=>{ANN.idx=(ANN.idx+1)%ANN.data.length;});}
+function annPrev(){annAutoSave(()=>{ANN.idx=(ANN.idx-1+ANN.data.length)%ANN.data.length;});}
+function annJumpEmpty(){annAutoSave(()=>{for(let i=1;i<=ANN.data.length;i++){const j=(ANN.idx+i)%ANN.data.length;if(ANN.data[j].labels.length===0){ANN.idx=j;return;}}});}
+function annJumpLabeled(){annAutoSave(()=>{for(let i=1;i<=ANN.data.length;i++){const j=(ANN.idx+i)%ANN.data.length;if(ANN.data[j].labels.length>0){ANN.idx=j;return;}}});}
+
+function annIoU(a,b){
+  const ax1=a.xc-a.w/2, ay1=a.yc-a.h/2, ax2=a.xc+a.w/2, ay2=a.yc+a.h/2;
+  const bx1=b.xc-b.w/2, by1=b.yc-b.h/2, bx2=b.xc+b.w/2, by2=b.yc+b.h/2;
+  const ix1=Math.max(ax1,bx1), iy1=Math.max(ay1,by1), ix2=Math.min(ax2,bx2), iy2=Math.min(ay2,by2);
+  if(ix2<=ix1||iy2<=iy1)return 0;
+  const inter=(ix2-ix1)*(iy2-iy1);
+  const areaA=Math.max(0,ax2-ax1)*Math.max(0,ay2-ay1);
+  const areaB=Math.max(0,bx2-bx1)*Math.max(0,by2-by1);
+  const denom=areaA+areaB-inter;
+  return denom>0?inter/denom:0;
+}
+
+async function annRunFlorence(){
+  if(!ANN.data.length||!ANN.dataset)return;
+  const cur=annCurImg();
+  const btn=$('btn_florence');
+  const prev=btn.textContent;
+  btn.textContent='Florence...';
+  btn.disabled=true;
+  try{
+    const r=await api('/api/v1/datasets/florence_suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset:ANN.dataset,img:cur.img,labels:ANN.classes,limit:24})});
+    const suggestions=r.suggestions||[];
+    let added=0;
+    suggestions.forEach(s=>{
+      const cls=ANN.classes.indexOf(s.label);
+      if(cls<0)return;
+      const cand={cls,xc:s.xc,yc:s.yc,w:s.w,h:s.h};
+      const dup=cur.labels.some(lb=>lb.cls===cls&&annIoU(lb,cand)>0.6);
+      if(!dup){cur.labels.push(cand);added++;}
+    });
+    if(added>0){ANN.dirty=true;annDraw();}
+    btn.textContent=added>0?`Florence +${added}`:`Florence 0`;
+    setTimeout(()=>{btn.textContent='Florence';},1800);
+  }catch(e){
+    console.error(e);
+    btn.textContent='Florence !';
+    setTimeout(()=>{btn.textContent='Florence';},1800);
+  }
+  btn.disabled=false;
+}
+
+// save/delete
+async function annSave(){
+  if(!ANN.data.length)return;
+  const item=ANN.data[ANN.idx];
+  const lines=item.labels.map(lb=>{
+    const shape=lb.shape||'rect';
+    if(shape==='polygon'&&lb.points&&lb.points.length>=3){
+      // polygon format: cls xc yc w h 0.0 polygon x1,y1;x2,y2;...
+      const ptsStr=lb.points.map(p=>`${p.x.toFixed(6)},${p.y.toFixed(6)}`).join(';');
+      return `${lb.cls} ${lb.xc.toFixed(6)} ${lb.yc.toFixed(6)} ${lb.w.toFixed(6)} ${lb.h.toFixed(6)} 0.000000 polygon ${ptsStr}`;
+    }
+    const base=`${lb.cls} ${lb.xc.toFixed(6)} ${lb.yc.toFixed(6)} ${lb.w.toFixed(6)} ${lb.h.toFixed(6)}`;
+    const angle=lb.angle||0;
+    if(angle||shape!=='rect') return `${base} ${angle.toFixed(6)} ${shape}`;
+    return base;
+  });
+  try{
+    await api('/api/v1/datasets/save_labels',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dataset:ANN.dataset,img:item.img,labels:lines.join('\n')})});
+    ANN.dirty=false;annDraw();
+  }catch(e){console.error('Save failed:',e);}
+}
+async function annDeleteImage(){
+  if(!ANN.data.length)return;
+  if(!confirm(`Delete ${ANN.data[ANN.idx].img}?`))return;
+  try{
+    await api('/api/v1/datasets/delete_image',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dataset:ANN.dataset,img:ANN.data[ANN.idx].img})});
+    ANN.data.splice(ANN.idx,1);if(!ANN.data.length)return;
+    if(ANN.idx>=ANN.data.length)ANN.idx=ANN.data.length-1;
+    ANN.dirty=false;annLoadImage();
+  }catch(e){console.error(e);}
+}
+async function annAddClass(){
+  const input=$('ann_new_class');const name=input.value.trim();if(!name)return;
+  if(ANN.classes.includes(name)){alert('Already exists');return;}
+  ANN.classes.push(name);ANN.drawClass=ANN.classes.length-1;input.value='';annBuildClassList();
+  try{await api('/api/v1/datasets/add_class',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({dataset:ANN.dataset,name})});}catch(e){}
+}
+
+/* ── OCR overlay + editable + save ── */
+let ocrSelIdx=-1;
+
+// Run OCR on current image (always fresh from backend)
+async function annRunOCR(){
+  if(!ANN.data.length)return;
+  const cur=annCurImg();
+  $('btn_ocr').textContent='OCR...';
+  try{
+    const r=await api(`/api/v1/datasets/ocr?dataset=${encodeURIComponent(ANN.dataset)}&filename=${encodeURIComponent(cur.img)}`);
+    cur.ocr={boxes:r.boxes||[],imageW:r.image_w||0,imageH:r.image_h||0};
+  }catch(e){cur.ocr={boxes:[],imageW:0,imageH:0};console.error(e);}
+  ocrSelIdx=-1;annUpdateOCRUI();annDraw();
+}
+
+// Update all OCR UI (button text, sidebar list, edit field)
+function annUpdateOCRUI(){
+  const cur=annCurImg();
+  const boxes=(ANN.ocrOn&&cur.ocr)?cur.ocr.boxes:null;
+  $('btn_ocr').textContent=boxes?`OCR (${boxes.length})`:'OCR';
+  const header=$('ann_ocr_header'),list=$('ann_ocrlist'),edit=$('ann_ocr_edit');
+  if(!boxes||!ANN.ocrOn){header.style.display='none';list.innerHTML='';edit.style.display='none';return;}
+  header.style.display='';
+  $('ann_ocrcount').textContent=`(${boxes.length})`;
+  list.innerHTML='';
+  boxes.forEach((ob,i)=>{
+    const d=document.createElement('div');
+    d.className='box-item'+(i===ocrSelIdx?' sel':'');
+    d.style.color='#00ffcc';d.style.fontSize='10px';
+    d.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ob.text}</span><span style="color:var(--muted);font-size:9px">${(ob.confidence*100).toFixed(0)}%</span>`;
+    d.onclick=()=>{ocrSelIdx=i;annUpdateOCRUI();annDraw();};
+    list.appendChild(d);
+  });
+  if(ocrSelIdx>=0&&ocrSelIdx<boxes.length){
+    edit.style.display='';
+    const input=$('ann_ocr_text');
+    input.value=boxes[ocrSelIdx].text;
+    input.onchange=()=>{boxes[ocrSelIdx].text=input.value;annUpdateOCRUI();annDraw();};
+  } else { edit.style.display='none'; }
+}
+
+function annDeleteOCRBox(){
+  const cur=annCurImg();
+  if(!cur.ocr||ocrSelIdx<0||ocrSelIdx>=cur.ocr.boxes.length)return;
+  cur.ocr.boxes.splice(ocrSelIdx,1);
+  ocrSelIdx=-1;annUpdateOCRUI();annDraw();
+}
+
+function annHitOCR(ix,iy){
+  const cur=annCurImg();
+  if(!ANN.ocrOn||!cur.ocr)return -1;
+  for(let i=cur.ocr.boxes.length-1;i>=0;i--){
+    const ob=cur.ocr.boxes[i];
+    if(ix>=ob.x1*ANN.imgW&&ix<=ob.x2*ANN.imgW&&iy>=ob.y1*ANN.imgH&&iy<=ob.y2*ANN.imgH)return i;
+  }
+  return -1;
+}
+
+async function annToggleOCR(){
+  if(ANN.ocrOn){
+    // already on: if current image has OCR, re-scan; else turn off
+    const cur=annCurImg();
+    if(cur.ocr){
+      // re-scan (force fresh)
+      cur.ocr=null; await annRunOCR(); return;
+    }
+    ANN.ocrOn=false;
+    $('btn_ocr').classList.remove('btn-primary');
+    $('btn_ocr').textContent='OCR';ocrSelIdx=-1;
+    annUpdateOCRUI();annDraw();
+  } else {
+    ANN.ocrOn=true;
+    $('btn_ocr').classList.add('btn-primary');
+    const cur=annCurImg();
+    if(!cur.ocr) await annRunOCR();
+    else { annUpdateOCRUI();annDraw(); }
+  }
+}
+
+async function annSaveOCR(){
+  const cur=annCurImg();
+  if(!cur.ocr||!cur.ocr.boxes.length){alert('Run OCR first');return;}
+  const cleanBoxes=cur.ocr.boxes.map(ob=>({text:ob.text,confidence:ob.confidence,x1:ob.x1,y1:ob.y1,x2:ob.x2,y2:ob.y2}));
+  try{
+    const r=await api('/api/v1/datasets/ocr/save',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dataset:ANN.dataset,filename:cur.img,
+        boxes:cleanBoxes,image_w:cur.ocr.imageW,image_h:cur.ocr.imageH})});
+    $('btn_ocr_save').textContent=`Saved (${r.total_images})`;
+    setTimeout(()=>{$('btn_ocr_save').textContent='Save OCR';},2000);
+  }catch(e){console.error(e);}
+}
+
+async function annBatchOCR(){
+  if(!ANN.dataset){alert('Select a dataset first');return;}
+  $('btn_ocr_batch').textContent='Scanning...';$('btn_ocr_batch').disabled=true;
+  try{
+    const r=await api('/api/v1/datasets/ocr/batch',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dataset:ANN.dataset})});
+    alert(`Batch OCR done!\nScanned: ${r.scanned} new images\nTotal: ${r.total_images} images, ${r.total_texts} text regions\nSaved to: data/raw_images/${ANN.dataset}/ocr_results.json`);
+  }catch(e){alert('Batch failed: '+e.message);}
+  $('btn_ocr_batch').textContent='Batch';$('btn_ocr_batch').disabled=false;
+}
+
+async function annOpenOCRFolder(){
+  if(!ANN.dataset){alert('Select a dataset first');return;}
+  try{
+    await api('/api/v1/datasets/open_folder',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dataset:ANN.dataset})});
+  }catch(e){alert('Failed: '+e.message);}
+}
+
+// resize handler
+window.addEventListener('resize',()=>{if(currentPage==='annotate'&&ANN.bgImg)annDraw();});
+</script>
+</body>
+</html>
